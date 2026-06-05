@@ -14,7 +14,117 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      restaurants: {
+        Row: {
+          address: string | null
+          allergy_info: string | null
+          brand_color: string | null
+          catering_button_label: string | null
+          catering_link: string | null
+          catering_menu_pdf_path: string | null
+          concierge_name: string | null
+          created_at: string
+          cuisine_type: string | null
+          delivery_pickup: string | null
+          dietary_gluten_free: boolean
+          dietary_halal: boolean
+          dietary_vegan: boolean
+          dietary_vegetarian: boolean
+          email: string | null
+          google_maps_link: string | null
+          id: string
+          instagram_link: string | null
+          menu_pdf_path: string | null
+          name: string | null
+          onboarding_completed: boolean
+          onboarding_step: number
+          order_button_label: string | null
+          order_online_link: string | null
+          parking_info: string | null
+          phone: string | null
+          popular_dishes: string | null
+          reservation_button_label: string | null
+          reservation_link: string | null
+          story: string | null
+          updated_at: string
+          user_id: string
+          website_url: string | null
+          welcome_message: string | null
+        }
+        Insert: {
+          address?: string | null
+          allergy_info?: string | null
+          brand_color?: string | null
+          catering_button_label?: string | null
+          catering_link?: string | null
+          catering_menu_pdf_path?: string | null
+          concierge_name?: string | null
+          created_at?: string
+          cuisine_type?: string | null
+          delivery_pickup?: string | null
+          dietary_gluten_free?: boolean
+          dietary_halal?: boolean
+          dietary_vegan?: boolean
+          dietary_vegetarian?: boolean
+          email?: string | null
+          google_maps_link?: string | null
+          id?: string
+          instagram_link?: string | null
+          menu_pdf_path?: string | null
+          name?: string | null
+          onboarding_completed?: boolean
+          onboarding_step?: number
+          order_button_label?: string | null
+          order_online_link?: string | null
+          parking_info?: string | null
+          phone?: string | null
+          popular_dishes?: string | null
+          reservation_button_label?: string | null
+          reservation_link?: string | null
+          story?: string | null
+          updated_at?: string
+          user_id: string
+          website_url?: string | null
+          welcome_message?: string | null
+        }
+        Update: {
+          address?: string | null
+          allergy_info?: string | null
+          brand_color?: string | null
+          catering_button_label?: string | null
+          catering_link?: string | null
+          catering_menu_pdf_path?: string | null
+          concierge_name?: string | null
+          created_at?: string
+          cuisine_type?: string | null
+          delivery_pickup?: string | null
+          dietary_gluten_free?: boolean
+          dietary_halal?: boolean
+          dietary_vegan?: boolean
+          dietary_vegetarian?: boolean
+          email?: string | null
+          google_maps_link?: string | null
+          id?: string
+          instagram_link?: string | null
+          menu_pdf_path?: string | null
+          name?: string | null
+          onboarding_completed?: boolean
+          onboarding_step?: number
+          order_button_label?: string | null
+          order_online_link?: string | null
+          parking_info?: string | null
+          phone?: string | null
+          popular_dishes?: string | null
+          reservation_button_label?: string | null
+          reservation_link?: string | null
+          story?: string | null
+          updated_at?: string
+          user_id?: string
+          website_url?: string | null
+          welcome_message?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
