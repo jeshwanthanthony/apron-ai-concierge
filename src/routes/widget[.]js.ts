@@ -1,6 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-// @ts-expect-error - vite raw import
-import widgetSource from "../../public/widget.js?raw";
+import widgetSource from "../public/widget.js?raw";
 
 export const Route = createFileRoute("/widget.js")({
   server: {
