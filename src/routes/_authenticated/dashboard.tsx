@@ -34,7 +34,8 @@ function Dashboard() {
 
   const signOut = async () => { await supabase.auth.signOut(); navigate({ to: "/" }); };
 
-  const widgetSnippet = `<script src="https://cdn.maitre.app/widget.js" data-restaurant="${r.id}"></script>`;
+  const origin = typeof window !== "undefined" ? window.location.origin : "";
+  const widgetSnippet = `<script src="${origin}/widget.js" data-restaurant="${r.id}" data-color="${r.brand_color || "#7c3aed"}" data-name="${(r.concierge_name || "Concierge").replace(/"/g, "&quot;")}" data-welcome="${(r.welcome_message || "Hello!").replace(/"/g, "&quot;")}" async></script>`;
   const copy = () => { navigator.clipboard.writeText(widgetSnippet); toast.success("Snippet copied"); };
 
   const menuStatus = r.menu_pdf_path ? "ready" : "missing";
@@ -128,8 +129,8 @@ function Dashboard() {
                 Paste this snippet into your site's <code className="rounded bg-muted px-1.5 py-0.5 text-xs">&lt;/body&gt;</code> tag.
               </p>
               <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                <PlatformGuide name="Wix" steps={["Open Settings → Custom Code", "Add Code to All Pages", "Paste snippet, place in Body End"]} />
-                <PlatformGuide name="Squarespace" steps={["Settings → Advanced → Code Injection", "Paste in Footer", "Save"]} />
+                <PlatformGuide name="Wix" steps={["Settings → Custom Code (NOT HTML Embed — embeds run in an isolated iframe)", "Add Custom Code → All Pages → Body - end", "Paste snippet and save"]} />
+                <PlatformGuide name="Squarespace" steps={["Settings → Advanced → Code Injection", "Paste snippet in Footer", "Save"]} />
               </div>
               <div className="mt-5 overflow-hidden rounded-xl border border-border bg-foreground p-4">
                 <pre className="overflow-x-auto text-xs leading-relaxed text-background/90">{widgetSnippet}</pre>
