@@ -34,7 +34,8 @@ function Dashboard() {
 
   const signOut = async () => { await supabase.auth.signOut(); navigate({ to: "/" }); };
 
-  const widgetSnippet = `<script src="https://cdn.maitre.app/widget.js" data-restaurant="${r.id}"></script>`;
+  const origin = typeof window !== "undefined" ? window.location.origin : "";
+  const widgetSnippet = `<script src="${origin}/widget.js" data-restaurant="${r.id}" data-color="${r.brand_color || "#7c3aed"}" data-name="${(r.concierge_name || "Concierge").replace(/"/g, "&quot;")}" data-welcome="${(r.welcome_message || "Hello!").replace(/"/g, "&quot;")}" async></script>`;
   const copy = () => { navigator.clipboard.writeText(widgetSnippet); toast.success("Snippet copied"); };
 
   const menuStatus = r.menu_pdf_path ? "ready" : "missing";
