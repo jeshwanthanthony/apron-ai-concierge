@@ -183,6 +183,7 @@
     root.appendChild(bubble);
     root.appendChild(win);
     document.body.appendChild(root);
+    console.log("Widget bubble added to page");
   }
 
   function addMsg(container, text, who) {
@@ -200,8 +201,17 @@
   }
 
   function init() {
-    injectStyles();
-    build();
+    try {
+      injectStyles();
+      build();
+    } catch (err) {
+      console.error("[AI Restaurant Concierge] Widget failed to initialize", err);
+      var fb = document.createElement("div");
+      fb.textContent = "Widget failed to initialize";
+      fb.style.cssText =
+        "position:fixed;bottom:24px;right:24px;background:#dc2626;color:#fff;padding:10px 14px;border-radius:8px;font:13px sans-serif;z-index:2147483647;";
+      document.body.appendChild(fb);
+    }
   }
 
   if (document.readyState === "loading") {
