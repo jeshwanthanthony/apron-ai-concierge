@@ -199,7 +199,7 @@ export const Route = createFileRoute("/api/concierge")({
 
         // Generate an answer (or a graceful fallback if the key isn't set yet).
         const apiKey = process.env.OPENAI_API_KEY;
-        const model = process.env.OPENAI_MODEL || "gpt-4o-mini";
+        const model = process.env.OPENAI_MODEL || "gpt-4.1-mini";
         let answer: string;
         try {
           if (!apiKey) {
