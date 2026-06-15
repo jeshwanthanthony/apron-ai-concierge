@@ -1,16 +1,16 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { createClient } from "@supabase/supabase-js";
-import type { Database } from "@/integrations/supabase/types";
+import { ensureEnv, serverClient, embedTexts, toVectorLiteral } from "@/lib/concierge-rag";
 
 /**
  * Public AI concierge endpoint used by the embeddable widget.
  *
  *   POST /api/concierge  { restaurantId, question, history? }  ->  { answer }
  *
- * It reads the restaurant's guest-facing context (profile + owner Q&A) through a
- * SECURITY DEFINER RPC, asks OpenAI for a concise answer, and logs the question
- * to the restaurant's history. The OpenAI key is read from server-side env only
- * (OPENAI_API_KEY in `.env.local`) and never reaches the browser.
+ * RAG flow: load the restaurant's guest-facing context (profile + owner Q&A) via
+ * a SECURITY DEFINER RPC, embed the guest's question, retrieve the most relevant
+ * menu chunks (pgvector), ask OpenAI for a concise grounded answer, and log the
+ * question. The OpenAI key is read from server-side env only (OPENAI_API_KEY in
+ * `.env.local`) and never reaches the browser.
  */
 
 const CORS = {
@@ -24,54 +24,6 @@ const json = (body: unknown, status = 200) =>
     status,
     headers: { "Content-Type": "application/json", ...CORS },
   });
-
-// Local dev: `vite dev` doesn't always populate process.env for non-VITE vars,
-// and `.env.local` in particular may not be auto-loaded. Read the env files
-// ourselves (server-only) so OPENAI_API_KEY is available without exposing it to
-// the client. Real hosting env vars always win (we never overwrite existing).
-let envLoaded = false;
-async function ensureEnv() {
-  if (envLoaded) return;
-  envLoaded = true;
-  try {
-    const { readFileSync } = await import("node:fs");
-    const { resolve } = await import("node:path");
-    for (const file of [".env.local", ".env"]) {
-      let text = "";
-      try {
-        text = readFileSync(resolve(process.cwd(), file), "utf8");
-      } catch {
-        continue;
-      }
-      for (const raw of text.split("\n")) {
-        const line = raw.trim();
-        if (!line || line.startsWith("#")) continue;
-        const eq = line.indexOf("=");
-        if (eq === -1) continue;
-        const key = line.slice(0, eq).trim();
-        let val = line.slice(eq + 1).trim();
-        if (
-          (val.startsWith('"') && val.endsWith('"')) ||
-          (val.startsWith("'") && val.endsWith("'"))
-        ) {
-          val = val.slice(1, -1);
-        }
-        if (key && process.env[key] === undefined) process.env[key] = val;
-      }
-    }
-  } catch {
-    /* fs not available (edge runtime) — rely on real env vars */
-  }
-}
-
-function serverSupabase() {
-  const url = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
-  const anon = process.env.SUPABASE_PUBLISHABLE_KEY || process.env.VITE_SUPABASE_PUBLISHABLE_KEY;
-  if (!url || !anon) throw new Error("Supabase env not configured");
-  return createClient<Database>(url, anon, {
-    auth: { persistSession: false, autoRefreshToken: false },
-  });
-}
 
 type HistoryItem = { role: "user" | "assistant"; content: string };
 
@@ -185,7 +137,7 @@ export const Route = createFileRoute("/api/concierge")({
         if (!question) return json({ error: "question is required" }, 400);
         if (question.length > 2000) return json({ error: "question is too long" }, 400);
 
-        const supabase = serverSupabase();
+        const supabase = serverClient();
 
         // Load the restaurant's guest-facing context.
         const { data: ctxData, error: ctxError } = await supabase.rpc("get_concierge_context", {
@@ -197,9 +149,35 @@ export const Route = createFileRoute("/api/concierge")({
           return json({ error: "Unknown restaurant" }, 404);
         }
 
-        // Generate an answer (or a graceful fallback if the key isn't set yet).
         const apiKey = process.env.OPENAI_API_KEY;
         const model = process.env.OPENAI_MODEL || "gpt-4.1-mini";
+
+        // RAG: embed the question and retrieve the most relevant menu chunks.
+        // Falls back to the full menu text if retrieval yields nothing.
+        let menuContext = "";
+        if (apiKey) {
+          try {
+            const [qEmbedding] = await embedTexts(apiKey, [question]);
+            const { data: matches } = await supabase.rpc("match_menu_chunks", {
+              p_restaurant_id: restaurantId,
+              query_embedding: toVectorLiteral(qEmbedding),
+              match_count: 6,
+            });
+            if (matches && matches.length) {
+              menuContext = matches.map((m: { content: string }) => m.content).join("\n---\n");
+            }
+          } catch (err) {
+            console.error("[concierge] retrieval error:", err);
+          }
+        }
+        if (!menuContext && typeof ctx.menu_text === "string" && ctx.menu_text.trim()) {
+          menuContext = ctx.menu_text;
+        }
+
+        let context = buildContextPrompt(ctx);
+        if (menuContext) context += "\n\n=== MENU (most relevant excerpts) ===\n" + menuContext;
+
+        // Generate an answer (or a graceful fallback if the key isn't set yet).
         let answer: string;
         try {
           if (!apiKey) {
@@ -210,7 +188,7 @@ export const Route = createFileRoute("/api/concierge")({
             answer = await askOpenAI({
               apiKey,
               model,
-              context: buildContextPrompt(ctx),
+              context,
               conciergeName: ctx.concierge_name,
               restaurantName: ctx.name,
               history,

@@ -4,9 +4,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { extractPdfText, ingestMenu } from "@/lib/pdf-client";
 import {
   Utensils, FileText, Check, Sparkles, Copy, Pencil, LogOut, Loader2, AlertCircle,
-  Plus, Trash2, Save, X, MessageSquare, RefreshCw, Upload, HelpCircle,
+  Plus, Trash2, Save, X, MessageSquare, RefreshCw, Upload, HelpCircle, Sparkle,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -173,32 +174,53 @@ function Dashboard() {
 }
 
 function MenuCard({ r, onUpdated }: { r: any; onUpdated: (path: string) => void }) {
-  const [uploading, setUploading] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [status, setStatus] = useState("");
 
   const replace = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    setUploading(true);
-    const filePath = `${r.user_id}/${Date.now()}-${file.name}`;
-    const up = await supabase.storage.from("menus").upload(filePath, file, { upsert: true });
-    if (up.error) { setUploading(false); toast.error(up.error.message); return; }
-    const { error } = await supabase.from("restaurants").update({ menu_pdf_path: filePath }).eq("id", r.id);
-    setUploading(false);
-    if (error) { toast.error(error.message); return; }
-    onUpdated(filePath);
-    toast.success("Menu updated");
+    setBusy(true);
+    try {
+      setStatus("Uploading…");
+      const filePath = `${r.user_id}/${Date.now()}-${file.name}`;
+      const up = await supabase.storage.from("menus").upload(filePath, file, { upsert: true });
+      if (up.error) throw up.error;
+      const { error } = await supabase.from("restaurants").update({ menu_pdf_path: filePath }).eq("id", r.id);
+      if (error) throw error;
+      onUpdated(filePath);
+
+      // Extract text + index it for the AI concierge (RAG).
+      setStatus("Reading menu…");
+      const text = await extractPdfText(file);
+      if (!text.trim()) {
+        toast.message("Menu uploaded, but no text was found (is it a scanned image?). The concierge will use your profile + Q&A.");
+        return;
+      }
+      setStatus("Teaching your concierge…");
+      const n = await ingestMenu(text, "menu");
+      toast.success(`Menu uploaded and indexed for AI (${n} sections).`);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Menu upload failed");
+    } finally {
+      setBusy(false);
+      setStatus("");
+    }
   };
 
   const remove = async () => {
-    const { error } = await supabase.from("restaurants").update({ menu_pdf_path: null }).eq("id", r.id);
+    const { error } = await supabase.from("restaurants").update({ menu_pdf_path: null, menu_text: null }).eq("id", r.id);
     if (error) { toast.error(error.message); return; }
+    await supabase.from("menu_chunks").delete().eq("restaurant_id", r.id).eq("source", "menu");
     onUpdated("");
     toast.success("Menu removed");
   };
 
   return (
     <Card title="Menu PDF">
-      <p className="text-sm text-muted-foreground">The menu guests can ask your concierge about.</p>
+      <p className="text-sm text-muted-foreground">
+        Upload your menu and your concierge will read it — guests can ask about dishes, prices, and ingredients.
+      </p>
       <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-warm/20 p-4">
         <div className="flex min-w-0 items-center gap-3">
           <FileText className="h-5 w-5 shrink-0 text-primary" />
@@ -207,18 +229,26 @@ function MenuCard({ r, onUpdated }: { r: any; onUpdated: (path: string) => void 
           </span>
         </div>
         <div className="flex items-center gap-2">
-          <label className="inline-flex cursor-pointer items-center rounded-full border border-border bg-background px-3 py-1.5 text-xs font-medium hover:bg-warm/40">
-            {uploading ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <Upload className="mr-1.5 h-3.5 w-3.5" />}
-            {r.menu_pdf_path ? "Replace" : "Upload"}
-            <input type="file" accept="application/pdf" className="hidden" onChange={replace} disabled={uploading} />
+          <label className={cn(
+            "inline-flex cursor-pointer items-center rounded-full border border-border bg-background px-3 py-1.5 text-xs font-medium hover:bg-warm/40",
+            busy && "pointer-events-none opacity-60",
+          )}>
+            {busy ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <Upload className="mr-1.5 h-3.5 w-3.5" />}
+            {busy ? (status || "Working…") : r.menu_pdf_path ? "Replace" : "Upload"}
+            <input type="file" accept="application/pdf" className="hidden" onChange={replace} disabled={busy} />
           </label>
-          {r.menu_pdf_path && (
+          {r.menu_pdf_path && !busy && (
             <button onClick={remove} className="rounded-full p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground" aria-label="Remove menu">
               <Trash2 className="h-4 w-4" />
             </button>
           )}
         </div>
       </div>
+      {r.menu_pdf_path && (
+        <p className="mt-2 flex items-center gap-1.5 text-xs text-muted-foreground">
+          <Sparkle className="h-3 w-3 text-accent" /> Your concierge answers from this menu.
+        </p>
+      )}
     </Card>
   );
 }

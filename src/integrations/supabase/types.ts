@@ -14,6 +14,44 @@ export type Database = {
   }
   public: {
     Tables: {
+      menu_chunks: {
+        Row: {
+          chunk_index: number
+          content: string
+          created_at: string
+          embedding: string | null
+          id: string
+          restaurant_id: string
+          source: string
+        }
+        Insert: {
+          chunk_index?: number
+          content: string
+          created_at?: string
+          embedding?: string | null
+          id?: string
+          restaurant_id: string
+          source?: string
+        }
+        Update: {
+          chunk_index?: number
+          content?: string
+          created_at?: string
+          embedding?: string | null
+          id?: string
+          restaurant_id?: string
+          source?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "menu_chunks_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       qa_pairs: {
         Row: {
           answer: string
@@ -108,6 +146,7 @@ export type Database = {
           id: string
           instagram_link: string | null
           menu_pdf_path: string | null
+          menu_text: string | null
           name: string | null
           onboarding_completed: boolean
           onboarding_step: number
@@ -144,6 +183,7 @@ export type Database = {
           id?: string
           instagram_link?: string | null
           menu_pdf_path?: string | null
+          menu_text?: string | null
           name?: string | null
           onboarding_completed?: boolean
           onboarding_step?: number
@@ -180,6 +220,7 @@ export type Database = {
           id?: string
           instagram_link?: string | null
           menu_pdf_path?: string | null
+          menu_text?: string | null
           name?: string | null
           onboarding_completed?: boolean
           onboarding_step?: number
@@ -215,6 +256,17 @@ export type Database = {
           p_source?: string
         }
         Returns: string
+      }
+      match_menu_chunks: {
+        Args: {
+          match_count?: number
+          p_restaurant_id: string
+          query_embedding: string
+        }
+        Returns: {
+          content: string
+          similarity: number
+        }[]
       }
     }
     Enums: {
