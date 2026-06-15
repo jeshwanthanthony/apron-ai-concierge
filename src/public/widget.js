@@ -18,6 +18,16 @@
     (currentScript && currentScript.getAttribute("data-welcome")) ||
     "Hi there! 👋 How can I help you today? Ask me about our menu, reservations, or hours.";
 
+  // The concierge API lives on the same origin that served this widget script.
+  var apiBase = "";
+  try {
+    apiBase = new URL(currentScript.src).origin;
+  } catch (e) {
+    apiBase = "";
+  }
+  // Running history sent to the AI for context (capped server-side).
+  var chatHistory = [];
+
   console.log("AI Restaurant Concierge widget loaded");
   console.log("Restaurant ID:", restaurantId);
 
@@ -57,6 +67,7 @@
     ".arc-msg.arc-user{background:" +
     brandColor +
     ";color:#fff;border-top-right-radius:4px;align-self:flex-end;}" +
+    ".arc-msg.arc-typing{opacity:.55;letter-spacing:2px;}" +
     ".arc-quick{display:flex;flex-wrap:wrap;gap:6px;padding:10px 12px;border-top:1px solid #ececec;background:#fff;}" +
     ".arc-chip{background:#fff;border:1px solid " +
     brandColor +
@@ -122,23 +133,14 @@
 
     var quick = el("div", "arc-quick");
     var actions = [
-      { label: "Reserve Table", action: "reserve" },
-      { label: "Order Online", action: "order" },
-      { label: "Catering Inquiry", action: "catering" },
+      { label: "Reserve Table", prompt: "I'd like to make a reservation." },
+      { label: "Order Online", prompt: "How can I order online?" },
+      { label: "Catering Inquiry", prompt: "Do you offer catering?" },
     ];
     actions.forEach(function (a) {
       var chip = el("button", "arc-chip", a.label);
       chip.addEventListener("click", function () {
-        addMsg(body, a.label, "user");
-        setTimeout(function () {
-          var reply =
-            a.action === "reserve"
-              ? "Awesome — I can help you book a table. What date and time work best?"
-              : a.action === "order"
-              ? "Great! Would you like delivery or pickup? I can share our online ordering link."
-              : "Happy to help with catering! How many guests and what date are you planning for?";
-          addMsg(body, reply, "bot");
-        }, 500);
+        ask(a.prompt);
       });
       quick.appendChild(chip);
     });
@@ -150,22 +152,62 @@
     inputRow.appendChild(input);
     inputRow.appendChild(send);
 
-    function submit() {
-      var v = input.value.trim();
-      if (!v) return;
-      addMsg(body, v, "user");
+    var busy = false;
+
+    // Send a question to the AI concierge and render the answer.
+    function ask(text) {
+      var v = (text != null ? text : input.value).trim();
+      if (!v || busy) return;
       input.value = "";
-      setTimeout(function () {
-        addMsg(
-          body,
-          "Thanks! I'll get back to you shortly. (This is a preview — AI replies will go live soon.)",
-          "bot"
-        );
-      }, 600);
+      addMsg(body, v, "user");
+      chatHistory.push({ role: "user", content: v });
+
+      busy = true;
+      send.setAttribute("disabled", "true");
+      var typing = el("div", "arc-msg arc-bot arc-typing", "…");
+      body.appendChild(typing);
+      body.scrollTop = body.scrollHeight;
+
+      fetch(apiBase + "/api/concierge", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          restaurantId: restaurantId,
+          question: v,
+          history: chatHistory.slice(-8),
+        }),
+      })
+        .then(function (res) {
+          return res.json().then(function (data) {
+            return { ok: res.ok, data: data };
+          });
+        })
+        .then(function (r) {
+          var reply =
+            r.ok && r.data && r.data.answer
+              ? r.data.answer
+              : (r.data && r.data.error) ||
+                "Sorry, something went wrong. Please try again.";
+          chatHistory.push({ role: "assistant", content: reply });
+          if (typing.parentNode) typing.parentNode.removeChild(typing);
+          addMsg(body, reply, "bot");
+        })
+        .catch(function () {
+          if (typing.parentNode) typing.parentNode.removeChild(typing);
+          addMsg(body, "Sorry, I couldn't reach the concierge. Please try again.", "bot");
+        })
+        .then(function () {
+          busy = false;
+          send.removeAttribute("disabled");
+          input.focus();
+        });
     }
-    send.addEventListener("click", submit);
+
+    send.addEventListener("click", function () {
+      ask();
+    });
     input.addEventListener("keydown", function (e) {
-      if (e.key === "Enter") submit();
+      if (e.key === "Enter") ask();
     });
 
     win.appendChild(header);

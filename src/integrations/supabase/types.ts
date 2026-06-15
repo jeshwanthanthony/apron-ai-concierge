@@ -14,6 +14,79 @@ export type Database = {
   }
   public: {
     Tables: {
+      qa_pairs: {
+        Row: {
+          answer: string
+          created_at: string
+          id: string
+          question: string
+          restaurant_id: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          answer: string
+          created_at?: string
+          id?: string
+          question: string
+          restaurant_id: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          answer?: string
+          created_at?: string
+          id?: string
+          question?: string
+          restaurant_id?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "qa_pairs_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      question_logs: {
+        Row: {
+          answer: string | null
+          created_at: string
+          id: string
+          question: string
+          restaurant_id: string
+          source: string
+        }
+        Insert: {
+          answer?: string | null
+          created_at?: string
+          id?: string
+          question: string
+          restaurant_id: string
+          source?: string
+        }
+        Update: {
+          answer?: string | null
+          created_at?: string
+          id?: string
+          question?: string
+          restaurant_id?: string
+          source?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "question_logs_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       restaurants: {
         Row: {
           address: string | null
@@ -130,7 +203,19 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_concierge_context: {
+        Args: { p_restaurant_id: string }
+        Returns: Json
+      }
+      log_guest_question: {
+        Args: {
+          p_answer: string
+          p_question: string
+          p_restaurant_id: string
+          p_source?: string
+        }
+        Returns: string
+      }
     }
     Enums: {
       [_ in never]: never

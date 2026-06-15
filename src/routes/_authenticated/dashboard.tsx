@@ -2,8 +2,16 @@ import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Utensils, FileText, Check, Sparkles, Copy, Pencil, LogOut, Loader2, AlertCircle } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Utensils, FileText, Check, Sparkles, Copy, Pencil, LogOut, Loader2, AlertCircle,
+  Plus, Trash2, Save, X, MessageSquare, RefreshCw, Upload, HelpCircle,
+} from "lucide-react";
 import { toast } from "sonner";
+
+type QA = { id: string; question: string; answer: string; sort_order: number };
+type Log = { id: string; question: string; answer: string | null; source: string; created_at: string };
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
   component: Dashboard,
@@ -152,8 +160,227 @@ function Dashboard() {
             </Card>
           </aside>
         </div>
+
+        {/* Menu file, custom Q&A, and guest question history */}
+        <div className="mt-6 space-y-6">
+          <MenuCard r={r} onUpdated={(path) => setR({ ...r, menu_pdf_path: path })} />
+          <QASection restaurantId={r.id} />
+          <HistorySection restaurantId={r.id} />
+        </div>
       </div>
     </div>
+  );
+}
+
+function MenuCard({ r, onUpdated }: { r: any; onUpdated: (path: string) => void }) {
+  const [uploading, setUploading] = useState(false);
+
+  const replace = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    const filePath = `${r.user_id}/${Date.now()}-${file.name}`;
+    const up = await supabase.storage.from("menus").upload(filePath, file, { upsert: true });
+    if (up.error) { setUploading(false); toast.error(up.error.message); return; }
+    const { error } = await supabase.from("restaurants").update({ menu_pdf_path: filePath }).eq("id", r.id);
+    setUploading(false);
+    if (error) { toast.error(error.message); return; }
+    onUpdated(filePath);
+    toast.success("Menu updated");
+  };
+
+  const remove = async () => {
+    const { error } = await supabase.from("restaurants").update({ menu_pdf_path: null }).eq("id", r.id);
+    if (error) { toast.error(error.message); return; }
+    onUpdated("");
+    toast.success("Menu removed");
+  };
+
+  return (
+    <Card title="Menu PDF">
+      <p className="text-sm text-muted-foreground">The menu guests can ask your concierge about.</p>
+      <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-warm/20 p-4">
+        <div className="flex min-w-0 items-center gap-3">
+          <FileText className="h-5 w-5 shrink-0 text-primary" />
+          <span className="truncate text-sm">
+            {r.menu_pdf_path ? r.menu_pdf_path.split("/").pop() : <span className="text-muted-foreground">No menu uploaded</span>}
+          </span>
+        </div>
+        <div className="flex items-center gap-2">
+          <label className="inline-flex cursor-pointer items-center rounded-full border border-border bg-background px-3 py-1.5 text-xs font-medium hover:bg-warm/40">
+            {uploading ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <Upload className="mr-1.5 h-3.5 w-3.5" />}
+            {r.menu_pdf_path ? "Replace" : "Upload"}
+            <input type="file" accept="application/pdf" className="hidden" onChange={replace} disabled={uploading} />
+          </label>
+          {r.menu_pdf_path && (
+            <button onClick={remove} className="rounded-full p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground" aria-label="Remove menu">
+              <Trash2 className="h-4 w-4" />
+            </button>
+          )}
+        </div>
+      </div>
+    </Card>
+  );
+}
+
+function QASection({ restaurantId }: { restaurantId: string }) {
+  const [items, setItems] = useState<QA[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [q, setQ] = useState("");
+  const [a, setA] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editQ, setEditQ] = useState("");
+  const [editA, setEditA] = useState("");
+
+  const load = async () => {
+    const { data } = await supabase
+      .from("qa_pairs")
+      .select("id, question, answer, sort_order")
+      .eq("restaurant_id", restaurantId)
+      .order("sort_order")
+      .order("created_at");
+    setItems(data || []);
+    setLoading(false);
+  };
+  useEffect(() => { load(); /* eslint-disable-next-line */ }, [restaurantId]);
+
+  const add = async () => {
+    if (!q.trim() || !a.trim()) { toast.error("Add both a question and an answer"); return; }
+    setSaving(true);
+    const { error } = await supabase.from("qa_pairs").insert({
+      restaurant_id: restaurantId, question: q.trim(), answer: a.trim(), sort_order: items.length,
+    });
+    setSaving(false);
+    if (error) { toast.error(error.message); return; }
+    setQ(""); setA(""); toast.success("Q&A added"); load();
+  };
+
+  const startEdit = (item: QA) => { setEditingId(item.id); setEditQ(item.question); setEditA(item.answer); };
+  const cancelEdit = () => { setEditingId(null); setEditQ(""); setEditA(""); };
+
+  const saveEdit = async (id: string) => {
+    if (!editQ.trim() || !editA.trim()) { toast.error("Question and answer can't be empty"); return; }
+    const { error } = await supabase.from("qa_pairs").update({ question: editQ.trim(), answer: editA.trim() }).eq("id", id);
+    if (error) { toast.error(error.message); return; }
+    cancelEdit(); toast.success("Saved"); load();
+  };
+
+  const remove = async (id: string) => {
+    const { error } = await supabase.from("qa_pairs").delete().eq("id", id);
+    if (error) { toast.error(error.message); return; }
+    toast.success("Deleted"); load();
+  };
+
+  return (
+    <Card title="Custom Q&A">
+      <p className="text-sm text-muted-foreground">
+        Write your own questions and answers. Your concierge will prefer these when guests ask something similar.
+      </p>
+
+      {/* Add new */}
+      <div className="mt-5 space-y-3 rounded-2xl border border-border bg-warm/20 p-4">
+        <Input placeholder="Question (e.g. Do you take walk-ins?)" value={q} onChange={(e) => setQ(e.target.value)} className="h-10 rounded-xl bg-background" />
+        <Textarea placeholder="Answer" value={a} onChange={(e) => setA(e.target.value)} className="min-h-[72px] rounded-xl bg-background" />
+        <Button onClick={add} disabled={saving} className="rounded-full">
+          {saving ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <Plus className="mr-1.5 h-3.5 w-3.5" />}
+          Add Q&A
+        </Button>
+      </div>
+
+      {/* List */}
+      <div className="mt-5 space-y-3">
+        {loading ? (
+          <div className="flex justify-center py-6"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
+        ) : items.length === 0 ? (
+          <div className="flex flex-col items-center gap-2 py-8 text-center text-sm text-muted-foreground">
+            <HelpCircle className="h-6 w-6" />
+            No custom Q&A yet. Add your first one above.
+          </div>
+        ) : (
+          items.map((item) => (
+            <div key={item.id} className="rounded-2xl border border-border p-4">
+              {editingId === item.id ? (
+                <div className="space-y-3">
+                  <Input value={editQ} onChange={(e) => setEditQ(e.target.value)} className="h-10 rounded-xl" />
+                  <Textarea value={editA} onChange={(e) => setEditA(e.target.value)} className="min-h-[72px] rounded-xl" />
+                  <div className="flex gap-2">
+                    <Button size="sm" onClick={() => saveEdit(item.id)} className="rounded-full"><Save className="mr-1.5 h-3.5 w-3.5" /> Save</Button>
+                    <Button size="sm" variant="ghost" onClick={cancelEdit} className="rounded-full"><X className="mr-1.5 h-3.5 w-3.5" /> Cancel</Button>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium">{item.question}</p>
+                    <p className="mt-1 whitespace-pre-wrap text-sm text-muted-foreground">{item.answer}</p>
+                  </div>
+                  <div className="flex shrink-0 gap-1">
+                    <button onClick={() => startEdit(item)} className="rounded-full p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground" aria-label="Edit"><Pencil className="h-3.5 w-3.5" /></button>
+                    <button onClick={() => remove(item.id)} className="rounded-full p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground" aria-label="Delete"><Trash2 className="h-3.5 w-3.5" /></button>
+                  </div>
+                </div>
+              )}
+            </div>
+          ))
+        )}
+      </div>
+    </Card>
+  );
+}
+
+function HistorySection({ restaurantId }: { restaurantId: string }) {
+  const [logs, setLogs] = useState<Log[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const load = async () => {
+    setLoading(true);
+    const { data } = await supabase
+      .from("question_logs")
+      .select("id, question, answer, source, created_at")
+      .eq("restaurant_id", restaurantId)
+      .order("created_at", { ascending: false })
+      .limit(200);
+    setLogs(data || []);
+    setLoading(false);
+  };
+  useEffect(() => { load(); /* eslint-disable-next-line */ }, [restaurantId]);
+
+  const remove = async (id: string) => {
+    const { error } = await supabase.from("question_logs").delete().eq("id", id);
+    if (error) { toast.error(error.message); return; }
+    setLogs((l) => l.filter((x) => x.id !== id));
+  };
+
+  return (
+    <Card title="Guest Questions">
+      <div className="flex items-center justify-between">
+        <p className="text-sm text-muted-foreground">Every question guests have asked your concierge — newest first.</p>
+        <Button variant="ghost" size="sm" onClick={load} className="rounded-full"><RefreshCw className="mr-1.5 h-3.5 w-3.5" /> Refresh</Button>
+      </div>
+
+      <div className="mt-4 space-y-3">
+        {loading ? (
+          <div className="flex justify-center py-6"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
+        ) : logs.length === 0 ? (
+          <div className="flex flex-col items-center gap-2 py-8 text-center text-sm text-muted-foreground">
+            <MessageSquare className="h-6 w-6" />
+            No guest questions yet. They'll appear here once people start chatting with your concierge.
+          </div>
+        ) : (
+          logs.map((log) => (
+            <div key={log.id} className="rounded-2xl border border-border p-4">
+              <div className="flex items-start justify-between gap-3">
+                <p className="text-sm font-medium">{log.question}</p>
+                <button onClick={() => remove(log.id)} className="shrink-0 rounded-full p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground" aria-label="Delete"><Trash2 className="h-3.5 w-3.5" /></button>
+              </div>
+              {log.answer && <p className="mt-1.5 whitespace-pre-wrap text-sm text-muted-foreground">{log.answer}</p>}
+              <p className="mt-2 text-xs text-muted-foreground/70">{new Date(log.created_at).toLocaleString()}</p>
+            </div>
+          ))
+        )}
+      </div>
+    </Card>
   );
 }
 
