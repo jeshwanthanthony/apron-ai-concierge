@@ -92,6 +92,7 @@ function Dashboard() {
         <div className="mt-8 space-y-6">
           <ProfileCard r={r} onSaved={patch} />
           <AppearanceCard r={r} onSaved={patch} />
+          <ConciergeTester r={r} />
           <MenuCard r={r} onUpdated={(path) => patch({ menu_pdf_path: path })} />
           <QASection restaurantId={r.id} />
           <HistorySection restaurantId={r.id} />
@@ -120,9 +121,13 @@ function ProfileCard({ r, onSaved }: { r: any; onSaved: (fields: Record<string, 
     for (const [k] of DIETARY) o[k] = !!r[k];
     return o;
   };
+  const [editing, setEditing] = useState(false);
   const [form, setForm] = useState<Record<string, any>>(seed);
   const [saving, setSaving] = useState(false);
   const set = (k: string, v: any) => setForm((f) => ({ ...f, [k]: v }));
+
+  const startEdit = () => { setForm(seed()); setEditing(true); };
+  const cancel = () => setEditing(false);
 
   const save = async () => {
     setSaving(true);
@@ -130,13 +135,55 @@ function ProfileCard({ r, onSaved }: { r: any; onSaved: (fields: Record<string, 
     setSaving(false);
     if (error) { toast.error(error.message); return; }
     onSaved(form);
+    setEditing(false);
     toast.success("Profile saved");
   };
 
+  if (!editing) {
+    const dietary = DIETARY.filter(([k]) => r[k]).map(([, l]) => l);
+    return (
+      <Card title="Restaurant Profile">
+        <div className="mb-5 flex items-center justify-between gap-3">
+          <p className="text-sm text-muted-foreground">The core information your concierge uses to answer guests.</p>
+          <Button size="sm" variant="outline" onClick={startEdit} className="shrink-0 rounded-full"><Pencil className="mr-1.5 h-3.5 w-3.5" /> Edit</Button>
+        </div>
+        <dl className="grid gap-x-8 gap-y-4 sm:grid-cols-2">
+          <Detail label="Name" value={r.name} />
+          <Detail label="Cuisine" value={r.cuisine_type} />
+          <Detail label="Website" value={r.website_url} />
+          <Detail label="Phone" value={r.phone} />
+          <Detail label="Email" value={r.email} />
+          <Detail label="Popular dishes" value={r.popular_dishes} />
+          <div className="sm:col-span-2"><Detail label="Address" value={r.address} /></div>
+          <div className="sm:col-span-2"><Detail label="Story" value={r.story} /></div>
+          <Detail label="Parking" value={r.parking_info} />
+          <Detail label="Delivery & pickup" value={r.delivery_pickup} />
+          <div className="sm:col-span-2"><Detail label="Allergy info" value={r.allergy_info} /></div>
+          <div className="sm:col-span-2">
+            <dt className="text-xs uppercase tracking-wider text-muted-foreground">Dietary</dt>
+            <dd className="mt-1.5 flex flex-wrap gap-1.5">
+              {dietary.length ? dietary.map((l) => (
+                <span key={l} className="rounded-full bg-warm/60 px-2.5 py-0.5 text-xs font-medium">{l}</span>
+              )) : <span className="text-sm text-muted-foreground">—</span>}
+            </dd>
+          </div>
+        </dl>
+      </Card>
+    );
+  }
+
   return (
     <Card title="Restaurant Profile">
-      <p className="text-sm text-muted-foreground">This is the core information your concierge uses to answer guests.</p>
-      <div className="mt-5 grid gap-4 sm:grid-cols-2">
+      <div className="mb-5 flex items-center justify-between gap-3">
+        <p className="text-sm text-muted-foreground">Editing — changes apply to your concierge as soon as you save.</p>
+        <div className="flex shrink-0 gap-2">
+          <Button size="sm" onClick={save} disabled={saving} className="rounded-full">
+            {saving ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <Save className="mr-1.5 h-3.5 w-3.5" />} Save
+          </Button>
+          <Button size="sm" variant="ghost" onClick={cancel} className="rounded-full"><X className="mr-1.5 h-3.5 w-3.5" /> Cancel</Button>
+        </div>
+      </div>
+      <div className="grid gap-4 sm:grid-cols-2">
         <Field label="Restaurant name"><Input className={inputCls} value={form.name} onChange={(e) => set("name", e.target.value)} /></Field>
         <Field label="Cuisine"><Input className={inputCls} value={form.cuisine_type} onChange={(e) => set("cuisine_type", e.target.value)} /></Field>
         <Field label="Website"><Input className={inputCls} value={form.website_url} onChange={(e) => set("website_url", e.target.value)} /></Field>
@@ -164,13 +211,16 @@ function ProfileCard({ r, onSaved }: { r: any; onSaved: (fields: Record<string, 
           ))}
         </div>
       </div>
-
-      <div className="mt-6">
-        <Button onClick={save} disabled={saving} className="rounded-full bg-gradient-hero shadow-glow">
-          {saving ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <Save className="mr-1.5 h-3.5 w-3.5" />} Save profile
-        </Button>
-      </div>
     </Card>
+  );
+}
+
+function Detail({ label, value }: { label: string; value: any }) {
+  return (
+    <div>
+      <dt className="text-xs uppercase tracking-wider text-muted-foreground">{label}</dt>
+      <dd className="mt-1.5 whitespace-pre-wrap text-sm">{value || <span className="text-muted-foreground">—</span>}</dd>
+    </div>
   );
 }
 
@@ -247,6 +297,82 @@ function AppearanceCard({ r, onSaved }: { r: any; onSaved: (fields: Record<strin
           <PreviewWidget r={{ ...r, ...form }} />
           <div className="mt-3 flex items-center gap-2 text-xs text-muted-foreground">
             <div className="h-1.5 w-1.5 animate-pulse rounded-full bg-success" /> Live preview
+          </div>
+        </div>
+      </div>
+    </Card>
+  );
+}
+
+/* --------------------- Live concierge tester (real AI chat) --------------------- */
+
+type Msg = { role: "user" | "assistant"; content: string };
+
+function ConciergeTester({ r }: { r: any }) {
+  const color = r.brand_color || "#7c3aed";
+  const [messages, setMessages] = useState<Msg[]>([
+    { role: "assistant", content: r.welcome_message || "Hi there! 👋 How can I help you today?" },
+  ]);
+  const [input, setInput] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  const ask = async (text?: string) => {
+    const q = (text ?? input).trim();
+    if (!q || busy) return;
+    setInput("");
+    const history = messages.filter((m) => m.role === "user" || m.role === "assistant").slice(-8);
+    setMessages((m) => [...m, { role: "user", content: q }]);
+    setBusy(true);
+    try {
+      const res = await fetch("/api/concierge", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ restaurantId: r.id, question: q, history }),
+      });
+      const data = await res.json().catch(() => ({}));
+      const reply = res.ok && data.answer ? data.answer : data.error || "Something went wrong.";
+      setMessages((m) => [...m, { role: "assistant", content: reply }]);
+    } catch {
+      setMessages((m) => [...m, { role: "assistant", content: "Couldn't reach the concierge. Is the dev server running?" }]);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <Card title="Test Your Concierge">
+      <p className="text-sm text-muted-foreground">
+        Chat with your live AI concierge right here — the same answers guests get. Great for testing without installing the widget.
+      </p>
+      <div className="mt-4 overflow-hidden rounded-2xl border border-border">
+        <div className="flex h-[360px] flex-col bg-warm/10">
+          <div className="flex-1 space-y-2.5 overflow-y-auto p-4">
+            {messages.map((m, i) => (
+              <div
+                key={i}
+                className={cn(
+                  "max-w-[85%] whitespace-pre-wrap rounded-2xl px-3.5 py-2 text-sm",
+                  m.role === "user" ? "ml-auto rounded-tr-sm text-white" : "rounded-tl-sm border border-border bg-card",
+                )}
+                style={m.role === "user" ? { background: color } : undefined}
+              >
+                {m.content}
+              </div>
+            ))}
+            {busy && <div className="max-w-[85%] rounded-2xl rounded-tl-sm border border-border bg-card px-3.5 py-2 text-sm opacity-60">…</div>}
+          </div>
+          <div className="flex gap-2 border-t border-border bg-background p-3">
+            <Input
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") ask(); }}
+              placeholder="Ask about your menu, hours, reservations…"
+              className="h-10 rounded-full"
+              disabled={busy}
+            />
+            <Button onClick={() => ask()} disabled={busy} className="rounded-full" style={{ background: color }}>
+              {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : "Send"}
+            </Button>
           </div>
         </div>
       </div>

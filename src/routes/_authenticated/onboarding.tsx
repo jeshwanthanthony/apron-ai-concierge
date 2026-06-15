@@ -9,6 +9,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { ArrowLeft, ArrowRight, Check, Loader2, Sparkles, Upload, FileText, X, Utensils } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { extractPdfText, ingestMenu } from "@/lib/pdf-client";
 
 export const Route = createFileRoute("/_authenticated/onboarding")({
   component: Onboarding,
@@ -273,8 +274,8 @@ function Step4({ form, update, userId }: { form: Form; update: <K extends keyof 
   return (
     <div className="space-y-6">
       <div className="grid gap-5 sm:grid-cols-2">
-        <FileUpload label="Menu PDF" path={form.menu_pdf_path} userId={userId} onChange={(p) => update("menu_pdf_path", p)} />
-        <FileUpload label="Catering Menu PDF" path={form.catering_menu_pdf_path} userId={userId} onChange={(p) => update("catering_menu_pdf_path", p)} />
+        <FileUpload label="Menu PDF" path={form.menu_pdf_path} userId={userId} source="menu" onChange={(p) => update("menu_pdf_path", p)} />
+        <FileUpload label="Catering Menu PDF" path={form.catering_menu_pdf_path} userId={userId} source="catering_menu" onChange={(p) => update("catering_menu_pdf_path", p)} />
       </div>
       <Field label="Allergy Information" hint="Anything guests should know about allergens, cross-contamination, etc.">
         <Textarea rows={3} className="rounded-xl" placeholder="We can accommodate most allergies. Please notify your server..." value={form.allergy_info} onChange={(e) => update("allergy_info", e.target.value)} />
@@ -300,7 +301,7 @@ function Step4({ form, update, userId }: { form: Form; update: <K extends keyof 
   );
 }
 
-function FileUpload({ label, path, userId, onChange }: { label: string; path: string; userId: string; onChange: (p: string) => void }) {
+function FileUpload({ label, path, userId, onChange, source }: { label: string; path: string; userId: string; onChange: (p: string) => void; source?: "menu" | "catering_menu" }) {
   const [uploading, setUploading] = useState(false);
   const handle = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -308,10 +309,23 @@ function FileUpload({ label, path, userId, onChange }: { label: string; path: st
     setUploading(true);
     const filePath = `${userId}/${Date.now()}-${file.name}`;
     const { error } = await supabase.storage.from("menus").upload(filePath, file, { upsert: true });
-    setUploading(false);
-    if (error) { toast.error(error.message); return; }
+    if (error) { setUploading(false); toast.error(error.message); return; }
     onChange(filePath);
     toast.success("Uploaded");
+
+    // Index the document for the AI concierge (best-effort; never blocks setup).
+    if (source) {
+      try {
+        const text = await extractPdfText(file);
+        if (text.trim()) {
+          const n = await ingestMenu(text, source);
+          toast.success(`Indexed for your concierge (${n} sections).`);
+        }
+      } catch (err) {
+        console.error("[onboarding] menu index failed", err);
+      }
+    }
+    setUploading(false);
   };
   return (
     <div className="space-y-2">
