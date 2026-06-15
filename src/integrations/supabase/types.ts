@@ -248,6 +248,10 @@ export type Database = {
         Args: { p_restaurant_id: string }
         Returns: Json
       }
+      get_widget_config: {
+        Args: { p_restaurant_id: string }
+        Returns: Json
+      }
       log_guest_question: {
         Args: {
           p_answer: string

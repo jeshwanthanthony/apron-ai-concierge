@@ -196,7 +196,10 @@
 
       fetch(apiBase + "/api/concierge", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        // text/plain keeps this a CORS "simple request" (no preflight), so it
+        // works when the widget is embedded on a different origin (e.g. Wix).
+        // The server parses the JSON body regardless of content-type.
+        headers: { "Content-Type": "text/plain;charset=UTF-8" },
         body: JSON.stringify({
           restaurantId: restaurantId,
           question: v,

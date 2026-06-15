@@ -385,6 +385,16 @@ function ConciergeTester({ r }: { r: any }) {
 function MenuCard({ r, onUpdated }: { r: any; onUpdated: (path: string) => void }) {
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState("");
+  const [chunks, setChunks] = useState<number | null>(null);
+
+  const loadChunks = async () => {
+    const { count } = await supabase
+      .from("menu_chunks")
+      .select("*", { count: "exact", head: true })
+      .eq("restaurant_id", r.id);
+    setChunks(count ?? 0);
+  };
+  useEffect(() => { loadChunks(); /* eslint-disable-next-line */ }, [r.id]);
 
   const replace = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -407,6 +417,7 @@ function MenuCard({ r, onUpdated }: { r: any; onUpdated: (path: string) => void 
       }
       setStatus("Teaching your concierge…");
       const n = await ingestMenu(text, "menu");
+      setChunks(n);
       toast.success(`Menu uploaded and indexed for AI (${n} sections).`);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Menu upload failed");
@@ -420,6 +431,7 @@ function MenuCard({ r, onUpdated }: { r: any; onUpdated: (path: string) => void 
     const { error } = await supabase.from("restaurants").update({ menu_pdf_path: null, menu_text: null }).eq("id", r.id);
     if (error) { toast.error(error.message); return; }
     await supabase.from("menu_chunks").delete().eq("restaurant_id", r.id).eq("source", "menu");
+    setChunks(0);
     onUpdated("");
     toast.success("Menu removed");
   };
@@ -452,10 +464,16 @@ function MenuCard({ r, onUpdated }: { r: any; onUpdated: (path: string) => void 
           )}
         </div>
       </div>
-      {r.menu_pdf_path && (
-        <p className="mt-2 flex items-center gap-1.5 text-xs text-muted-foreground">
-          <Sparkle className="h-3 w-3 text-accent" /> Your concierge answers from this menu.
-        </p>
+      {r.menu_pdf_path && chunks !== null && (
+        chunks > 0 ? (
+          <p className="mt-2 flex items-center gap-1.5 text-xs text-success">
+            <Sparkle className="h-3 w-3" /> Indexed for AI ({chunks} sections) — your concierge reads this menu.
+          </p>
+        ) : (
+          <p className="mt-2 flex items-center gap-1.5 text-xs text-accent">
+            <AlertCircle className="h-3 w-3" /> Uploaded but not indexed yet. Click <strong>Replace</strong> and re-select your menu PDF to let the AI read it.
+          </p>
+        )
       )}
     </Card>
   );

@@ -76,12 +76,15 @@ async function askOpenAI(opts: {
   question: string;
 }): Promise<string> {
   const system =
-    `You are ${opts.conciergeName || "the concierge"}, the friendly AI assistant for ${opts.restaurantName || "this restaurant"}. ` +
-    "Answer guest questions using ONLY the information provided below. " +
-    "Be warm, concise (1-3 sentences), and helpful. " +
-    "If a relevant link is available (reservations, ordering, catering), share it. " +
-    "If the information is not provided, politely say you're not sure and suggest contacting the restaurant directly. " +
-    "Never invent prices, hours, or menu items that aren't given.\n\n" +
+    `You are ${opts.conciergeName || "the concierge"}, the warm, knowledgeable AI host for ${opts.restaurantName || "this restaurant"}. ` +
+    "Your job is to help guests like a friendly, well-informed member of staff.\n\n" +
+    "Guidelines:\n" +
+    "- Answer naturally and conversationally. Greet guests warmly and keep replies concise (usually 1-3 sentences).\n" +
+    "- Ground every factual claim in the RESTAURANT INFORMATION and MENU below. Use the owner-provided Q&A first when it fits.\n" +
+    "- When a guest wants to book, order, or cater, share the matching link if one is provided.\n" +
+    "- If a specific detail (a price, an ingredient, hours) isn't in the information, say you're not certain and suggest contacting the restaurant — never invent it.\n" +
+    "- You may make reasonable, helpful suggestions (e.g. recommend popular or matching dishes) as long as they come from the menu/info provided.\n" +
+    "- Match the guest's language.\n\n" +
     "=== RESTAURANT INFORMATION ===\n" +
     opts.context;
 
@@ -97,7 +100,7 @@ async function askOpenAI(opts: {
       "Content-Type": "application/json",
       Authorization: `Bearer ${opts.apiKey}`,
     },
-    body: JSON.stringify({ model: opts.model, messages, temperature: 0.3, max_tokens: 400 }),
+    body: JSON.stringify({ model: opts.model, messages, temperature: 0.4, max_tokens: 500 }),
   });
 
   if (!resp.ok) {
@@ -161,7 +164,7 @@ export const Route = createFileRoute("/api/concierge")({
             const { data: matches } = await supabase.rpc("match_menu_chunks", {
               p_restaurant_id: restaurantId,
               query_embedding: toVectorLiteral(qEmbedding),
-              match_count: 6,
+              match_count: 8,
             });
             if (matches && matches.length) {
               menuContext = matches.map((m: { content: string }) => m.content).join("\n---\n");
