@@ -1,13 +1,16 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { extractPdfText, ingestMenu } from "@/lib/pdf-client";
 import {
   Utensils, FileText, Check, Sparkles, Copy, Pencil, LogOut, Loader2, AlertCircle,
   Plus, Trash2, Save, X, MessageSquare, RefreshCw, Upload, HelpCircle, Sparkle,
+  Palette, Clock, TrendingUp, Hash,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -19,6 +22,11 @@ export const Route = createFileRoute("/_authenticated/dashboard")({
 });
 
 type Restaurant = Record<string, any> | null;
+
+const PRESET_COLORS = [
+  "#7c3aed", "#4f46e5", "#2563eb", "#0891b2", "#16a34a",
+  "#ca8a04", "#ea580c", "#dc2626", "#db2777", "#0f172a",
+];
 
 function Dashboard() {
   const navigate = useNavigate();
@@ -42,10 +50,7 @@ function Dashboard() {
   if (loading || !r) return <div className="grid min-h-screen place-items-center"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>;
 
   const signOut = async () => { await supabase.auth.signOut(); navigate({ to: "/" }); };
-
-  const origin = typeof window !== "undefined" ? window.location.origin : "";
-  const widgetSnippet = `<script src="${origin}/widget.js" data-restaurant="${r.id}" data-color="${r.brand_color || "#7c3aed"}" data-name="${(r.concierge_name || "Concierge").replace(/"/g, "&quot;")}" data-welcome="${(r.welcome_message || "Hello!").replace(/"/g, "&quot;")}" async></script>`;
-  const copy = () => { navigator.clipboard.writeText(widgetSnippet); toast.success("Snippet copied"); };
+  const patch = (fields: Record<string, any>) => setR((cur) => ({ ...(cur || {}), ...fields }));
 
   const menuStatus = r.menu_pdf_path ? "ready" : "missing";
 
@@ -59,33 +64,21 @@ function Dashboard() {
             </div>
             <span className="text-sm font-semibold">Maitre</span>
           </Link>
-          <div className="flex items-center gap-3">
-            <Link to="/onboarding" className="hidden text-sm text-muted-foreground hover:text-foreground sm:inline">Edit profile</Link>
-            <Button variant="ghost" size="sm" onClick={signOut} className="rounded-full">
-              <LogOut className="mr-1.5 h-3.5 w-3.5" /> Sign out
-            </Button>
-          </div>
+          <Button variant="ghost" size="sm" onClick={signOut} className="rounded-full">
+            <LogOut className="mr-1.5 h-3.5 w-3.5" /> Sign out
+          </Button>
         </div>
       </header>
 
       <div className="mx-auto max-w-6xl px-6 py-10 sm:px-10 sm:py-14">
-        <div className="flex flex-wrap items-end justify-between gap-4">
-          <div>
-            <p className="text-xs font-medium uppercase tracking-wider text-accent">Dashboard</p>
-            <h1 className="mt-2 text-3xl font-semibold tracking-tight sm:text-4xl">{r.name || "Your restaurant"}</h1>
-            <p className="mt-1 text-muted-foreground">{r.cuisine_type || "Welcome back"}</p>
-          </div>
-          <Button asChild variant="outline" className="rounded-full"><Link to="/onboarding"><Pencil className="mr-1.5 h-3.5 w-3.5" /> Edit</Link></Button>
+        <div>
+          <p className="text-xs font-medium uppercase tracking-wider text-accent">Dashboard</p>
+          <h1 className="mt-2 text-3xl font-semibold tracking-tight sm:text-4xl">{r.name || "Your restaurant"}</h1>
+          <p className="mt-1 text-muted-foreground">{r.cuisine_type || "Welcome back"}</p>
         </div>
 
         <div className="mt-10 grid gap-6 lg:grid-cols-3">
-          <StatusCard
-            title="AI Concierge"
-            status="ready"
-            label="Live"
-            icon={<Sparkles className="h-4 w-4" />}
-            detail={r.concierge_name || "Concierge"}
-          />
+          <StatusCard title="AI Concierge" status="ready" label="Live" icon={<Sparkles className="h-4 w-4" />} detail={r.concierge_name || "Concierge"} />
           <StatusCard
             title="Menu Upload"
             status={menuStatus as any}
@@ -93,85 +86,175 @@ function Dashboard() {
             icon={<FileText className="h-4 w-4" />}
             detail={r.menu_pdf_path ? r.menu_pdf_path.split("/").pop() : "No menu uploaded"}
           />
-          <StatusCard
-            title="Widget"
-            status="ready"
-            label="Ready to install"
-            icon={<Check className="h-4 w-4" />}
-            detail="Copy snippet below"
-          />
+          <StatusCard title="Widget" status="ready" label="Ready to install" icon={<Check className="h-4 w-4" />} detail="Copy snippet below" />
         </div>
 
-        <div className="mt-10 grid gap-6 lg:grid-cols-[1fr_400px]">
-          {/* Profile */}
-          <section className="space-y-6">
-            <Card title="Restaurant Profile">
-              <dl className="grid gap-x-8 gap-y-4 sm:grid-cols-2">
-                <Detail label="Website" value={r.website_url} />
-                <Detail label="Phone" value={r.phone} />
-                <Detail label="Email" value={r.email} />
-                <Detail label="Cuisine" value={r.cuisine_type} />
-                <div className="sm:col-span-2"><Detail label="Address" value={r.address} /></div>
-                <div className="sm:col-span-2"><Detail label="Story" value={r.story} /></div>
-                <Detail label="Popular dishes" value={r.popular_dishes} />
-                <Detail label="Parking" value={r.parking_info} />
-                <Detail label="Delivery & Pickup" value={r.delivery_pickup} />
-                <div>
-                  <dt className="text-xs uppercase tracking-wider text-muted-foreground">Dietary</dt>
-                  <dd className="mt-1.5 flex flex-wrap gap-1.5">
-                    {[
-                      ["dietary_vegan", "Vegan"], ["dietary_vegetarian", "Vegetarian"],
-                      ["dietary_gluten_free", "Gluten Free"], ["dietary_halal", "Halal"],
-                    ].filter(([k]) => r[k as string]).map(([, l]) => (
-                      <span key={l} className="rounded-full bg-warm/60 px-2.5 py-0.5 text-xs font-medium">{l}</span>
-                    ))}
-                    {!r.dietary_vegan && !r.dietary_vegetarian && !r.dietary_gluten_free && !r.dietary_halal && (
-                      <span className="text-sm text-muted-foreground">—</span>
-                    )}
-                  </dd>
-                </div>
-              </dl>
-            </Card>
-
-            <Card title="Widget Installation">
-              <p className="text-sm text-muted-foreground">
-                Paste this snippet into your site's <code className="rounded bg-muted px-1.5 py-0.5 text-xs">&lt;/body&gt;</code> tag.
-              </p>
-              <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                <PlatformGuide name="Wix" steps={["Settings → Custom Code (NOT HTML Embed — embeds run in an isolated iframe)", "Add Custom Code → All Pages → Body - end", "Paste snippet and save"]} />
-                <PlatformGuide name="Squarespace" steps={["Settings → Advanced → Code Injection", "Paste snippet in Footer", "Save"]} />
-              </div>
-              <div className="mt-5 overflow-hidden rounded-xl border border-border bg-foreground p-4">
-                <pre className="overflow-x-auto text-xs leading-relaxed text-background/90">{widgetSnippet}</pre>
-              </div>
-              <Button onClick={copy} variant="outline" className="mt-4 rounded-full">
-                <Copy className="mr-1.5 h-3.5 w-3.5" /> Copy snippet
-              </Button>
-            </Card>
-          </section>
-
-          {/* Chatbot preview */}
-          <aside>
-            <Card title="Chatbot Preview">
-              <PreviewWidget r={r} />
-              <div className="mt-4 flex items-center gap-2 text-xs text-muted-foreground">
-                <div className="h-1.5 w-1.5 animate-pulse rounded-full bg-success" />
-                Live on your site once installed
-              </div>
-            </Card>
-          </aside>
-        </div>
-
-        {/* Menu file, custom Q&A, and guest question history */}
-        <div className="mt-6 space-y-6">
-          <MenuCard r={r} onUpdated={(path) => setR({ ...r, menu_pdf_path: path })} />
+        <div className="mt-8 space-y-6">
+          <ProfileCard r={r} onSaved={patch} />
+          <AppearanceCard r={r} onSaved={patch} />
+          <MenuCard r={r} onUpdated={(path) => patch({ menu_pdf_path: path })} />
           <QASection restaurantId={r.id} />
           <HistorySection restaurantId={r.id} />
+          <WidgetInstallCard r={r} />
         </div>
       </div>
     </div>
   );
 }
+
+/* ----------------------------- Editable profile ---------------------------- */
+
+const PROFILE_FIELDS = [
+  "name", "website_url", "phone", "email", "cuisine_type",
+  "address", "story", "popular_dishes", "parking_info", "delivery_pickup", "allergy_info",
+] as const;
+const DIETARY: [string, string][] = [
+  ["dietary_vegan", "Vegan"], ["dietary_vegetarian", "Vegetarian"],
+  ["dietary_gluten_free", "Gluten Free"], ["dietary_halal", "Halal"],
+];
+
+function ProfileCard({ r, onSaved }: { r: any; onSaved: (fields: Record<string, any>) => void }) {
+  const seed = () => {
+    const o: Record<string, any> = {};
+    for (const f of PROFILE_FIELDS) o[f] = r[f] ?? "";
+    for (const [k] of DIETARY) o[k] = !!r[k];
+    return o;
+  };
+  const [form, setForm] = useState<Record<string, any>>(seed);
+  const [saving, setSaving] = useState(false);
+  const set = (k: string, v: any) => setForm((f) => ({ ...f, [k]: v }));
+
+  const save = async () => {
+    setSaving(true);
+    const { error } = await supabase.from("restaurants").update(form).eq("id", r.id);
+    setSaving(false);
+    if (error) { toast.error(error.message); return; }
+    onSaved(form);
+    toast.success("Profile saved");
+  };
+
+  return (
+    <Card title="Restaurant Profile">
+      <p className="text-sm text-muted-foreground">This is the core information your concierge uses to answer guests.</p>
+      <div className="mt-5 grid gap-4 sm:grid-cols-2">
+        <Field label="Restaurant name"><Input className={inputCls} value={form.name} onChange={(e) => set("name", e.target.value)} /></Field>
+        <Field label="Cuisine"><Input className={inputCls} value={form.cuisine_type} onChange={(e) => set("cuisine_type", e.target.value)} /></Field>
+        <Field label="Website"><Input className={inputCls} value={form.website_url} onChange={(e) => set("website_url", e.target.value)} /></Field>
+        <Field label="Phone"><Input className={inputCls} value={form.phone} onChange={(e) => set("phone", e.target.value)} /></Field>
+        <Field label="Email"><Input className={inputCls} value={form.email} onChange={(e) => set("email", e.target.value)} /></Field>
+        <Field label="Popular dishes"><Input className={inputCls} value={form.popular_dishes} onChange={(e) => set("popular_dishes", e.target.value)} /></Field>
+        <div className="sm:col-span-2"><Field label="Address"><Input className={inputCls} value={form.address} onChange={(e) => set("address", e.target.value)} /></Field></div>
+        <div className="sm:col-span-2"><Field label="Story / about"><Textarea className="min-h-[80px] rounded-xl" value={form.story} onChange={(e) => set("story", e.target.value)} /></Field></div>
+        <Field label="Parking"><Input className={inputCls} value={form.parking_info} onChange={(e) => set("parking_info", e.target.value)} /></Field>
+        <Field label="Delivery & pickup"><Input className={inputCls} value={form.delivery_pickup} onChange={(e) => set("delivery_pickup", e.target.value)} /></Field>
+        <div className="sm:col-span-2"><Field label="Allergy info"><Textarea className="min-h-[60px] rounded-xl" value={form.allergy_info} onChange={(e) => set("allergy_info", e.target.value)} /></Field></div>
+      </div>
+
+      <div className="mt-5">
+        <span className="text-xs uppercase tracking-wider text-muted-foreground">Dietary options</span>
+        <div className="mt-2 flex flex-wrap gap-2">
+          {DIETARY.map(([key, label]) => (
+            <label key={key} className={cn(
+              "flex cursor-pointer items-center gap-2 rounded-full border px-3 py-1.5 text-sm transition",
+              form[key] ? "border-foreground bg-warm/50" : "border-border hover:border-foreground/40",
+            )}>
+              <Checkbox checked={form[key]} onCheckedChange={(v) => set(key, !!v)} />
+              {label}
+            </label>
+          ))}
+        </div>
+      </div>
+
+      <div className="mt-6">
+        <Button onClick={save} disabled={saving} className="rounded-full bg-gradient-hero shadow-glow">
+          {saving ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <Save className="mr-1.5 h-3.5 w-3.5" />} Save profile
+        </Button>
+      </div>
+    </Card>
+  );
+}
+
+/* --------------------- Editable chatbot appearance + preview --------------------- */
+
+function AppearanceCard({ r, onSaved }: { r: any; onSaved: (fields: Record<string, any>) => void }) {
+  const [form, setForm] = useState({
+    concierge_name: r.concierge_name ?? "Concierge",
+    brand_color: r.brand_color ?? "#7c3aed",
+    welcome_message: r.welcome_message ?? "Hi there! 👋 How can I help you today?",
+    reservation_button_label: r.reservation_button_label ?? "Reserve a Table",
+    order_button_label: r.order_button_label ?? "Order Online",
+    catering_button_label: r.catering_button_label ?? "Catering Inquiry",
+  });
+  const [saving, setSaving] = useState(false);
+  const set = (k: keyof typeof form, v: string) => setForm((f) => ({ ...f, [k]: v }));
+
+  const save = async () => {
+    setSaving(true);
+    const { error } = await supabase.from("restaurants").update(form).eq("id", r.id);
+    setSaving(false);
+    if (error) { toast.error(error.message); return; }
+    onSaved(form);
+    toast.success("Appearance saved");
+  };
+
+  return (
+    <Card title="Chatbot Appearance">
+      <p className="text-sm text-muted-foreground">Customize how your concierge looks and greets guests. The preview updates live.</p>
+      <div className="mt-5 grid gap-8 lg:grid-cols-[1fr_340px]">
+        {/* Controls */}
+        <div className="space-y-4">
+          <Field label="Concierge name"><Input className={inputCls} value={form.concierge_name} onChange={(e) => set("concierge_name", e.target.value)} /></Field>
+          <Field label="Welcome message"><Textarea className="min-h-[72px] rounded-xl" value={form.welcome_message} onChange={(e) => set("welcome_message", e.target.value)} /></Field>
+
+          <Field label="Brand color">
+            <div className="space-y-3">
+              <div className="flex flex-wrap gap-2">
+                {PRESET_COLORS.map((c) => (
+                  <button
+                    key={c}
+                    type="button"
+                    onClick={() => set("brand_color", c)}
+                    className={cn(
+                      "h-8 w-8 rounded-full border-2 transition",
+                      form.brand_color.toLowerCase() === c.toLowerCase() ? "border-foreground scale-110" : "border-transparent hover:scale-105",
+                    )}
+                    style={{ background: c }}
+                    aria-label={`Use ${c}`}
+                  />
+                ))}
+              </div>
+              <div className="flex items-center gap-3">
+                <input type="color" value={form.brand_color} onChange={(e) => set("brand_color", e.target.value)} className="h-10 w-14 cursor-pointer rounded-xl border border-border bg-transparent" />
+                <Input className={cn(inputCls, "max-w-[140px]")} value={form.brand_color} onChange={(e) => set("brand_color", e.target.value)} />
+                <Palette className="h-4 w-4 text-muted-foreground" />
+              </div>
+            </div>
+          </Field>
+
+          <div className="grid gap-4 sm:grid-cols-3">
+            <Field label="Reserve button"><Input className={inputCls} value={form.reservation_button_label} onChange={(e) => set("reservation_button_label", e.target.value)} /></Field>
+            <Field label="Order button"><Input className={inputCls} value={form.order_button_label} onChange={(e) => set("order_button_label", e.target.value)} /></Field>
+            <Field label="Catering button"><Input className={inputCls} value={form.catering_button_label} onChange={(e) => set("catering_button_label", e.target.value)} /></Field>
+          </div>
+
+          <Button onClick={save} disabled={saving} className="rounded-full bg-gradient-hero shadow-glow">
+            {saving ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <Save className="mr-1.5 h-3.5 w-3.5" />} Save appearance
+          </Button>
+        </div>
+
+        {/* Live preview */}
+        <div>
+          <PreviewWidget r={{ ...r, ...form }} />
+          <div className="mt-3 flex items-center gap-2 text-xs text-muted-foreground">
+            <div className="h-1.5 w-1.5 animate-pulse rounded-full bg-success" /> Live preview
+          </div>
+        </div>
+      </div>
+    </Card>
+  );
+}
+
+/* ------------------------------- Menu (RAG) -------------------------------- */
 
 function MenuCard({ r, onUpdated }: { r: any; onUpdated: (path: string) => void }) {
   const [busy, setBusy] = useState(false);
@@ -190,7 +273,6 @@ function MenuCard({ r, onUpdated }: { r: any; onUpdated: (path: string) => void 
       if (error) throw error;
       onUpdated(filePath);
 
-      // Extract text + index it for the AI concierge (RAG).
       setStatus("Reading menu…");
       const text = await extractPdfText(file);
       if (!text.trim()) {
@@ -253,6 +335,8 @@ function MenuCard({ r, onUpdated }: { r: any; onUpdated: (path: string) => void 
   );
 }
 
+/* ------------------------------- Custom Q&A -------------------------------- */
+
 function QASection({ restaurantId }: { restaurantId: string }) {
   const [items, setItems] = useState<QA[]>([]);
   const [loading, setLoading] = useState(true);
@@ -308,7 +392,6 @@ function QASection({ restaurantId }: { restaurantId: string }) {
         Write your own questions and answers. Your concierge will prefer these when guests ask something similar.
       </p>
 
-      {/* Add new */}
       <div className="mt-5 space-y-3 rounded-2xl border border-border bg-warm/20 p-4">
         <Input placeholder="Question (e.g. Do you take walk-ins?)" value={q} onChange={(e) => setQ(e.target.value)} className="h-10 rounded-xl bg-background" />
         <Textarea placeholder="Answer" value={a} onChange={(e) => setA(e.target.value)} className="min-h-[72px] rounded-xl bg-background" />
@@ -318,7 +401,6 @@ function QASection({ restaurantId }: { restaurantId: string }) {
         </Button>
       </div>
 
-      {/* List */}
       <div className="mt-5 space-y-3">
         {loading ? (
           <div className="flex justify-center py-6"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
@@ -359,6 +441,19 @@ function QASection({ restaurantId }: { restaurantId: string }) {
   );
 }
 
+/* --------------------- Guest question history (tabs + realtime) --------------------- */
+
+const STOP = new Set([
+  "the", "and", "for", "are", "you", "your", "can", "could", "would", "with", "what", "when", "where",
+  "how", "does", "did", "have", "has", "any", "our", "their", "this", "that", "there", "from", "about",
+  "will", "should", "they", "them", "but", "not", "get", "got", "use", "into", "out", "want", "need",
+  "please", "tell", "know", "like", "make", "give", "take", "also", "more", "much", "many",
+]);
+
+function normalizeQ(s: string) {
+  return s.toLowerCase().replace(/[^\w\s]/g, "").replace(/\s+/g, " ").trim();
+}
+
 function HistorySection({ restaurantId }: { restaurantId: string }) {
   const [logs, setLogs] = useState<Log[]>([]);
   const [loading, setLoading] = useState(true);
@@ -370,11 +465,25 @@ function HistorySection({ restaurantId }: { restaurantId: string }) {
       .select("id, question, answer, source, created_at")
       .eq("restaurant_id", restaurantId)
       .order("created_at", { ascending: false })
-      .limit(200);
+      .limit(500);
     setLogs(data || []);
     setLoading(false);
   };
-  useEffect(() => { load(); /* eslint-disable-next-line */ }, [restaurantId]);
+
+  useEffect(() => {
+    load();
+    // Live sync: new guest questions stream in without a manual refresh.
+    const channel = supabase
+      .channel(`qlogs-${restaurantId}`)
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "question_logs", filter: `restaurant_id=eq.${restaurantId}` },
+        (payload) => setLogs((prev) => (prev.some((l) => l.id === (payload.new as Log).id) ? prev : [payload.new as Log, ...prev])),
+      )
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+    /* eslint-disable-next-line */
+  }, [restaurantId]);
 
   const remove = async (id: string) => {
     const { error } = await supabase.from("question_logs").delete().eq("id", id);
@@ -382,35 +491,139 @@ function HistorySection({ restaurantId }: { restaurantId: string }) {
     setLogs((l) => l.filter((x) => x.id !== id));
   };
 
+  // Group identical/near-identical questions and count them.
+  const frequent = useMemo(() => {
+    const map = new Map<string, { question: string; count: number; last: string }>();
+    for (const l of logs) {
+      const key = normalizeQ(l.question);
+      if (!key) continue;
+      const ex = map.get(key);
+      if (ex) { ex.count++; if (l.created_at > ex.last) ex.last = l.created_at; }
+      else map.set(key, { question: l.question, count: 1, last: l.created_at });
+    }
+    return [...map.values()].sort((a, b) => b.count - a.count || (a.last < b.last ? 1 : -1));
+  }, [logs]);
+
+  // Keyword frequency across questions → "topics" guests care about.
+  const topics = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const l of logs) {
+      const seen = new Set<string>();
+      for (const w of normalizeQ(l.question).split(" ")) {
+        if (w.length < 3 || STOP.has(w) || seen.has(w)) continue;
+        seen.add(w);
+        counts.set(w, (counts.get(w) || 0) + 1);
+      }
+    }
+    return [...counts.entries()].filter(([, n]) => n >= 2).sort((a, b) => b[1] - a[1]).slice(0, 20);
+  }, [logs]);
+
   return (
     <Card title="Guest Questions">
       <div className="flex items-center justify-between">
-        <p className="text-sm text-muted-foreground">Every question guests have asked your concierge — newest first.</p>
+        <p className="text-sm text-muted-foreground">
+          What guests ask your concierge — synced live. {logs.length > 0 && <span className="text-foreground">{logs.length} total</span>}
+        </p>
         <Button variant="ghost" size="sm" onClick={load} className="rounded-full"><RefreshCw className="mr-1.5 h-3.5 w-3.5" /> Refresh</Button>
       </div>
 
-      <div className="mt-4 space-y-3">
-        {loading ? (
-          <div className="flex justify-center py-6"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
-        ) : logs.length === 0 ? (
-          <div className="flex flex-col items-center gap-2 py-8 text-center text-sm text-muted-foreground">
-            <MessageSquare className="h-6 w-6" />
-            No guest questions yet. They'll appear here once people start chatting with your concierge.
-          </div>
-        ) : (
-          logs.map((log) => (
-            <div key={log.id} className="rounded-2xl border border-border p-4">
-              <div className="flex items-start justify-between gap-3">
-                <p className="text-sm font-medium">{log.question}</p>
-                <button onClick={() => remove(log.id)} className="shrink-0 rounded-full p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground" aria-label="Delete"><Trash2 className="h-3.5 w-3.5" /></button>
+      {loading ? (
+        <div className="flex justify-center py-10"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
+      ) : logs.length === 0 ? (
+        <div className="flex flex-col items-center gap-2 py-10 text-center text-sm text-muted-foreground">
+          <MessageSquare className="h-6 w-6" />
+          No guest questions yet. They'll appear here live once people start chatting with your concierge.
+        </div>
+      ) : (
+        <Tabs defaultValue="recent" className="mt-5">
+          <TabsList>
+            <TabsTrigger value="recent"><Clock className="mr-1.5 h-3.5 w-3.5" /> Recent</TabsTrigger>
+            <TabsTrigger value="frequent"><TrendingUp className="mr-1.5 h-3.5 w-3.5" /> Most asked</TabsTrigger>
+            <TabsTrigger value="topics"><Hash className="mr-1.5 h-3.5 w-3.5" /> Topics</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="recent" className="mt-4 space-y-3">
+            {logs.map((log) => (
+              <div key={log.id} className="rounded-2xl border border-border p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <p className="text-sm font-medium">{log.question}</p>
+                  <button onClick={() => remove(log.id)} className="shrink-0 rounded-full p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground" aria-label="Delete"><Trash2 className="h-3.5 w-3.5" /></button>
+                </div>
+                {log.answer && <p className="mt-1.5 whitespace-pre-wrap text-sm text-muted-foreground">{log.answer}</p>}
+                <p className="mt-2 text-xs text-muted-foreground/70">{new Date(log.created_at).toLocaleString()}</p>
               </div>
-              {log.answer && <p className="mt-1.5 whitespace-pre-wrap text-sm text-muted-foreground">{log.answer}</p>}
-              <p className="mt-2 text-xs text-muted-foreground/70">{new Date(log.created_at).toLocaleString()}</p>
-            </div>
-          ))
-        )}
-      </div>
+            ))}
+          </TabsContent>
+
+          <TabsContent value="frequent" className="mt-4 space-y-2">
+            {frequent.map((f, i) => (
+              <div key={i} className="flex items-center justify-between gap-3 rounded-xl border border-border p-3">
+                <p className="min-w-0 text-sm">{f.question}</p>
+                <span className={cn(
+                  "shrink-0 rounded-full px-2.5 py-0.5 text-xs font-semibold",
+                  f.count > 1 ? "bg-accent/15 text-accent" : "bg-muted text-muted-foreground",
+                )}>
+                  {f.count}× {f.count > 1 ? "asked" : ""}
+                </span>
+              </div>
+            ))}
+          </TabsContent>
+
+          <TabsContent value="topics" className="mt-4">
+            {topics.length === 0 ? (
+              <p className="py-6 text-center text-sm text-muted-foreground">Not enough questions yet to spot recurring topics.</p>
+            ) : (
+              <div className="flex flex-wrap gap-2">
+                {topics.map(([word, n]) => (
+                  <span key={word} className="inline-flex items-center gap-1.5 rounded-full border border-border bg-warm/30 px-3 py-1.5 text-sm">
+                    {word} <span className="rounded-full bg-accent/15 px-1.5 text-xs font-semibold text-accent">{n}</span>
+                  </span>
+                ))}
+              </div>
+            )}
+          </TabsContent>
+        </Tabs>
+      )}
     </Card>
+  );
+}
+
+/* ------------------------------ Widget install ----------------------------- */
+
+function WidgetInstallCard({ r }: { r: any }) {
+  const origin = typeof window !== "undefined" ? window.location.origin : "";
+  const widgetSnippet = `<script src="${origin}/widget.js" data-restaurant="${r.id}" data-color="${r.brand_color || "#7c3aed"}" data-name="${(r.concierge_name || "Concierge").replace(/"/g, "&quot;")}" data-welcome="${(r.welcome_message || "Hello!").replace(/"/g, "&quot;")}" async></script>`;
+  const copy = () => { navigator.clipboard.writeText(widgetSnippet); toast.success("Snippet copied"); };
+
+  return (
+    <Card title="Widget Installation">
+      <p className="text-sm text-muted-foreground">
+        Paste this snippet into your site's <code className="rounded bg-muted px-1.5 py-0.5 text-xs">&lt;/body&gt;</code> tag.
+      </p>
+      <div className="mt-4 grid gap-3 sm:grid-cols-2">
+        <PlatformGuide name="Wix" steps={["Settings → Custom Code (NOT HTML Embed — embeds run in an isolated iframe)", "Add Custom Code → All Pages → Body - end", "Paste snippet and save"]} />
+        <PlatformGuide name="Squarespace" steps={["Settings → Advanced → Code Injection", "Paste snippet in Footer", "Save"]} />
+      </div>
+      <div className="mt-5 overflow-hidden rounded-xl border border-border bg-foreground p-4">
+        <pre className="overflow-x-auto text-xs leading-relaxed text-background/90">{widgetSnippet}</pre>
+      </div>
+      <Button onClick={copy} variant="outline" className="mt-4 rounded-full">
+        <Copy className="mr-1.5 h-3.5 w-3.5" /> Copy snippet
+      </Button>
+    </Card>
+  );
+}
+
+/* --------------------------------- Shared --------------------------------- */
+
+const inputCls = "h-10 rounded-xl";
+
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="space-y-1.5">
+      <label className="text-xs uppercase tracking-wider text-muted-foreground">{label}</label>
+      {children}
+    </div>
   );
 }
 
@@ -437,15 +650,6 @@ function Card({ title, children }: { title: string; children: React.ReactNode })
     <div className="rounded-3xl border border-border bg-card p-6 shadow-sm sm:p-8">
       <h2 className="mb-5 text-lg font-semibold tracking-tight">{title}</h2>
       {children}
-    </div>
-  );
-}
-
-function Detail({ label, value }: { label: string; value: any }) {
-  return (
-    <div>
-      <dt className="text-xs uppercase tracking-wider text-muted-foreground">{label}</dt>
-      <dd className="mt-1.5 text-sm">{value || <span className="text-muted-foreground">—</span>}</dd>
     </div>
   );
 }
