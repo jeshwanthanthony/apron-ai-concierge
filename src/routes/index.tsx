@@ -26,96 +26,97 @@ function Landing() {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Nav */}
-      <header className="px-6 py-6 sm:px-10">
-        <nav className="mx-auto flex max-w-6xl items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="grid h-9 w-9 place-items-center rounded-xl bg-gradient-hero text-primary-foreground">
-              <Utensils className="h-4 w-4" />
-            </div>
-            <span className="text-base font-semibold tracking-tight">Maitre</span>
-          </div>
-          <div className="flex items-center gap-3">
-            {signedIn ? (
-              <Link
-                to="/dashboard"
-                className="inline-flex items-center gap-1.5 rounded-full bg-foreground px-4 py-2 text-sm font-medium text-background transition hover:opacity-90"
-              >
-                Go to dashboard <ArrowRight className="h-3.5 w-3.5" />
-              </Link>
-            ) : (
-              <>
-                <Link to="/auth" className="text-sm font-medium text-muted-foreground hover:text-foreground">
-                  Sign in
-                </Link>
-                <Link
-                  to="/auth"
-                  className="inline-flex items-center gap-1.5 rounded-full bg-foreground px-4 py-2 text-sm font-medium text-background transition hover:opacity-90"
-                >
-                  Get started <ArrowRight className="h-3.5 w-3.5" />
-                </Link>
-              </>
-            )}
-          </div>
-        </nav>
-      </header>
+      {/* Fullscreen video hero */}
+      <section className="relative flex min-h-[100svh] flex-col overflow-hidden">
+        {/* Background video */}
+        <video
+          src="/maitre-ad.mp4"
+          autoPlay
+          loop
+          muted
+          playsInline
+          preload="auto"
+          className="absolute inset-0 h-full w-full object-cover"
+        />
+        {/* Scrim for legibility */}
+        <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/30 to-black/75" />
 
-      {/* Hero */}
-      <section className="px-6 pb-24 pt-16 sm:px-10 sm:pt-24">
-        <div className="mx-auto max-w-4xl text-center">
-          <div className="mx-auto inline-flex items-center gap-2 rounded-full border border-border bg-card px-3.5 py-1.5 text-xs font-medium text-muted-foreground shadow-sm">
-            <Sparkles className="h-3.5 w-3.5 text-accent" />
-            Now in private beta for Wix & Squarespace restaurants
+        {/* Nav */}
+        <header className="relative z-10 px-6 py-6 sm:px-10">
+          <nav className="mx-auto flex max-w-6xl items-center justify-between">
+            <div className="flex items-center gap-2 text-white">
+              <div className="grid h-9 w-9 place-items-center rounded-xl bg-white/15 backdrop-blur">
+                <Utensils className="h-4 w-4" />
+              </div>
+              <span className="text-base font-semibold tracking-tight">Maitre</span>
+            </div>
+            <div className="flex items-center gap-3">
+              {signedIn ? (
+                <Link
+                  to="/dashboard"
+                  className="inline-flex items-center gap-1.5 rounded-full bg-white px-4 py-2 text-sm font-medium text-zinc-900 transition hover:opacity-90"
+                >
+                  Go to dashboard <ArrowRight className="h-3.5 w-3.5" />
+                </Link>
+              ) : (
+                <>
+                  <Link to="/auth" className="text-sm font-medium text-white/80 hover:text-white">
+                    Sign in
+                  </Link>
+                  <Link
+                    to="/auth"
+                    className="inline-flex items-center gap-1.5 rounded-full bg-white px-4 py-2 text-sm font-medium text-zinc-900 transition hover:opacity-90"
+                  >
+                    Get started <ArrowRight className="h-3.5 w-3.5" />
+                  </Link>
+                </>
+              )}
+            </div>
+          </nav>
+        </header>
+
+        {/* Centered hero content */}
+        <div className="relative z-10 flex flex-1 flex-col items-center justify-center px-6 pb-20 text-center">
+          <div className="inline-flex items-center gap-2 rounded-full border border-white/25 bg-white/10 px-3.5 py-1.5 text-xs font-medium text-white backdrop-blur">
+            <Sparkles className="h-3.5 w-3.5" />
+            Now in private beta for Wix &amp; Squarespace restaurants
           </div>
-          <h1 className="mt-8 text-5xl font-semibold leading-[1.05] tracking-tight sm:text-7xl">
-            The AI concierge <br className="hidden sm:block" />
-            <span className="text-gradient-hero">your restaurant deserves.</span>
+          <h1 className="mt-7 max-w-4xl text-5xl font-semibold leading-[1.05] tracking-tight text-white drop-shadow-[0_2px_20px_rgba(0,0,0,0.5)] sm:text-7xl">
+            The AI concierge your restaurant deserves.
           </h1>
-          <p className="mx-auto mt-7 max-w-2xl text-lg text-muted-foreground sm:text-xl">
+          <p className="mt-6 max-w-2xl text-lg text-white/90 drop-shadow-[0_1px_10px_rgba(0,0,0,0.5)] sm:text-xl">
             Answer guest questions, take reservations, and showcase your menu — all from one elegant widget that lives on your site.
           </p>
-          <div className="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row">
+
+          {/* Attention-grabbing CTA */}
+          <div className="relative mt-12">
+            <span className="absolute inset-0 -z-10 animate-ping rounded-full bg-white/25" />
             <Link
               to={signedIn ? "/dashboard" : "/auth"}
-              className="inline-flex items-center gap-2 rounded-full bg-gradient-hero px-7 py-3.5 text-base font-medium text-primary-foreground shadow-glow transition hover:opacity-95"
+              className="maitre-attn group inline-flex items-center gap-2.5 rounded-full bg-gradient-hero px-10 py-4 text-lg font-semibold text-primary-foreground shadow-glow ring-4 ring-white/25 transition hover:ring-white/50"
             >
-              {signedIn ? "Go to dashboard" : "Set up your concierge"} <ArrowRight className="h-4 w-4" />
+              {signedIn ? "Open your dashboard" : "Try it free"}
+              <ArrowRight className="h-5 w-5 transition group-hover:translate-x-1" />
             </Link>
-            <span className="text-sm text-muted-foreground">5-minute onboarding · No credit card</span>
           </div>
+          <span className="mt-5 text-sm text-white/75">5-minute onboarding · No credit card</span>
         </div>
 
-        {/* Demo video */}
-        <div className="mx-auto mt-16 max-w-3xl">
-          <div className="overflow-hidden rounded-3xl border border-border bg-gradient-card shadow-elegant">
-            <div className="flex items-center gap-2 border-b border-border px-5 py-3">
-              <div className="h-2.5 w-2.5 rounded-full bg-muted" />
-              <div className="h-2.5 w-2.5 rounded-full bg-muted" />
-              <div className="h-2.5 w-2.5 rounded-full bg-muted" />
-              <div className="ml-3 text-xs text-muted-foreground">See Maitre in action</div>
-            </div>
-            <div className="relative">
-              <video
-                src="/maitre-ad.mp4"
-                autoPlay
-                loop
-                muted
-                playsInline
-                preload="auto"
-                className="block aspect-video w-full bg-foreground object-cover"
-              />
-              {/* Small CTA overlaid at the bottom — sign up, or dashboard if logged in */}
-              <div className="pointer-events-none absolute inset-x-0 bottom-0 flex justify-center bg-gradient-to-t from-black/55 to-transparent p-4 sm:p-5">
-                <Link
-                  to={signedIn ? "/dashboard" : "/auth"}
-                  className="pointer-events-auto inline-flex items-center gap-1.5 rounded-full bg-white/95 px-5 py-2.5 text-sm font-semibold text-zinc-900 shadow-lg backdrop-blur transition hover:bg-white"
-                >
-                  {signedIn ? "Open your dashboard" : "Try it free"} <ArrowRight className="h-3.5 w-3.5" />
-                </Link>
-              </div>
-            </div>
-          </div>
-        </div>
+        <style>{`
+          @keyframes maitre-attn {
+            0%, 100% { transform: translateY(0) rotate(0deg); }
+            8%  { transform: translateY(-12px) rotate(-3deg); }
+            16% { transform: translateY(0) rotate(3deg); }
+            24% { transform: translateY(-7px) rotate(-2deg); }
+            32% { transform: translateY(0) rotate(1deg); }
+            40% { transform: translateY(0) rotate(0deg); }
+          }
+          .maitre-attn { animation: maitre-attn 2.2s ease-in-out infinite; will-change: transform; }
+          .maitre-attn:hover { animation-play-state: paused; transform: scale(1.06); }
+          @media (prefers-reduced-motion: reduce) {
+            .maitre-attn { animation: none; }
+          }
+        `}</style>
       </section>
 
       {/* Features */}
