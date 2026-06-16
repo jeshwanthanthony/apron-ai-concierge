@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Sparkles, MessageCircle, Utensils, ArrowRight, Check } from "lucide-react";
+import { Sparkles, Utensils, ArrowRight, Check } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/")({
@@ -76,40 +76,42 @@ function Landing() {
           </p>
           <div className="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row">
             <Link
-              to="/auth"
+              to={signedIn ? "/dashboard" : "/auth"}
               className="inline-flex items-center gap-2 rounded-full bg-gradient-hero px-7 py-3.5 text-base font-medium text-primary-foreground shadow-glow transition hover:opacity-95"
             >
-              Set up your concierge <ArrowRight className="h-4 w-4" />
+              {signedIn ? "Go to dashboard" : "Set up your concierge"} <ArrowRight className="h-4 w-4" />
             </Link>
             <span className="text-sm text-muted-foreground">5-minute onboarding · No credit card</span>
           </div>
         </div>
 
-        {/* Preview Card */}
-        <div className="mx-auto mt-20 max-w-3xl">
+        {/* Demo video */}
+        <div className="mx-auto mt-16 max-w-3xl">
           <div className="overflow-hidden rounded-3xl border border-border bg-gradient-card shadow-elegant">
             <div className="flex items-center gap-2 border-b border-border px-5 py-3">
               <div className="h-2.5 w-2.5 rounded-full bg-muted" />
               <div className="h-2.5 w-2.5 rounded-full bg-muted" />
               <div className="h-2.5 w-2.5 rounded-full bg-muted" />
-              <div className="ml-3 text-xs text-muted-foreground">trattoria-roma.com</div>
+              <div className="ml-3 text-xs text-muted-foreground">See Maitre in action</div>
             </div>
-            <div className="grid gap-4 p-8 sm:grid-cols-[1fr_auto]">
-              <div className="space-y-3">
-                <div className="inline-flex items-center gap-2 rounded-full bg-warm/60 px-3 py-1 text-xs font-medium">
-                  <MessageCircle className="h-3 w-3" /> Concierge · Online
-                </div>
-                <p className="text-lg">
-                  <span className="text-muted-foreground">Buongiorno!</span> I'd love to help you plan your visit. Looking for a table tonight?
-                </p>
-                <div className="flex flex-wrap gap-2 pt-2">
-                  <span className="rounded-full border border-border bg-card px-3 py-1.5 text-xs">Reserve a table</span>
-                  <span className="rounded-full border border-border bg-card px-3 py-1.5 text-xs">View menu</span>
-                  <span className="rounded-full border border-border bg-card px-3 py-1.5 text-xs">Catering</span>
-                </div>
-              </div>
-              <div className="grid h-14 w-14 place-items-center rounded-2xl bg-gradient-hero text-primary-foreground sm:h-16 sm:w-16">
-                <Sparkles className="h-6 w-6" />
+            <div className="relative">
+              <video
+                src="/maitre-ad.mp4"
+                autoPlay
+                loop
+                muted
+                playsInline
+                preload="auto"
+                className="block aspect-video w-full bg-foreground object-cover"
+              />
+              {/* Small CTA overlaid at the bottom — sign up, or dashboard if logged in */}
+              <div className="pointer-events-none absolute inset-x-0 bottom-0 flex justify-center bg-gradient-to-t from-black/55 to-transparent p-4 sm:p-5">
+                <Link
+                  to={signedIn ? "/dashboard" : "/auth"}
+                  className="pointer-events-auto inline-flex items-center gap-1.5 rounded-full bg-white/95 px-5 py-2.5 text-sm font-semibold text-zinc-900 shadow-lg backdrop-blur transition hover:bg-white"
+                >
+                  {signedIn ? "Open your dashboard" : "Try it free"} <ArrowRight className="h-3.5 w-3.5" />
+                </Link>
               </div>
             </div>
           </div>
