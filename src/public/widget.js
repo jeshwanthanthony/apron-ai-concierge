@@ -18,7 +18,6 @@
 
   var restaurantId = currentScript ? currentScript.getAttribute("data-restaurant") : null;
 
-  // The concierge API + config live on the same origin that served this script.
   var apiBase = "";
   try {
     apiBase = new URL(currentScript.src).origin;
@@ -32,90 +31,77 @@
   console.log("Restaurant ID:", restaurantId);
 
   if (!restaurantId) {
-    console.error(
-      '[AI Restaurant Concierge] No restaurant ID found. Add data-restaurant="<your-id>" to the script tag.'
-    );
+    console.error('[AI Restaurant Concierge] No restaurant ID found. Add data-restaurant="<your-id>".');
     return;
   }
-
   if (window.__aiRestaurantConciergeMounted) {
     console.warn("[AI Restaurant Concierge] Widget already mounted, skipping.");
     return;
   }
   window.__aiRestaurantConciergeMounted = true;
 
-  // Defaults come from the script tag; live values are fetched from the server
-  // (so dashboard changes apply without re-pasting the snippet).
+  // Defaults from the snippet; live values fetched from the server on load.
   var cfg = {
     brandColor: attr("data-color", "#7c3aed"),
     conciergeName: attr("data-name", "Concierge"),
-    welcomeMessage: attr(
-      "data-welcome",
-      "Hi there! 👋 How can I help you today? Ask me about our menu, reservations, or hours."
-    ),
+    welcomeMessage: attr("data-welcome", "Hi there! 👋 How can I help you today? Ask me about our menu, reservations, or hours."),
     reservationLabel: "Reserve a Table",
     orderLabel: "Order Online",
     cateringLabel: "Catering Inquiry",
   };
 
   function escapeHtml(s) {
-    return String(s)
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;");
+    return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
   }
-
   function el(tag, cls, html) {
     var n = document.createElement(tag);
     if (cls) n.className = cls;
     if (html != null) n.innerHTML = html;
     return n;
   }
+  function initial() {
+    return (String(cfg.conciergeName).charAt(0) || "C").toUpperCase();
+  }
 
   function injectStyles() {
     var c = cfg.brandColor;
     var CSS =
-      "" +
-      ".arc-root,.arc-root *{box-sizing:border-box;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;line-height:1.4;}" +
-      ".arc-bubble{position:fixed;bottom:24px;right:24px;width:60px;height:60px;border-radius:9999px;background:" +
-      c +
-      ";color:#fff;border:none;cursor:pointer;box-shadow:0 10px 30px rgba(0,0,0,.2);z-index:2147483646;display:flex;align-items:center;justify-content:center;transition:transform .2s ease;}" +
+      ".arc-root,.arc-root *{box-sizing:border-box;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;}" +
+      ".arc-bubble{position:fixed;bottom:24px;right:24px;width:58px;height:58px;border-radius:9999px;background:" + c + ";color:#fff;border:none;cursor:pointer;box-shadow:0 12px 30px -8px rgba(0,0,0,.4);z-index:2147483646;display:flex;align-items:center;justify-content:center;transition:transform .2s ease;}" +
       ".arc-bubble:hover{transform:scale(1.06);}" +
-      ".arc-bubble svg{width:28px;height:28px;}" +
-      ".arc-window{position:fixed;bottom:100px;right:24px;width:360px;max-width:calc(100vw - 32px);height:520px;max-height:calc(100vh - 140px);background:#fff;border-radius:20px;box-shadow:0 20px 60px rgba(0,0,0,.25);z-index:2147483647;display:none;flex-direction:column;overflow:hidden;}" +
+      ".arc-bubble svg{width:26px;height:26px;}" +
+      ".arc-window{position:fixed;bottom:96px;right:24px;width:380px;max-width:calc(100vw - 32px);height:600px;max-height:calc(100vh - 130px);background:#fff;border-radius:20px;box-shadow:0 30px 70px -20px rgba(15,15,25,.4);z-index:2147483647;display:none;flex-direction:column;overflow:hidden;border:1px solid rgba(0,0,0,.06);}" +
       ".arc-window.arc-open{display:flex;}" +
-      ".arc-header{padding:16px;color:#fff;display:flex;align-items:center;gap:12px;background:" +
-      c +
-      ";}" +
-      ".arc-avatar{width:36px;height:36px;border-radius:9999px;background:rgba(255,255,255,.22);display:flex;align-items:center;justify-content:center;}" +
-      ".arc-title{font-size:14px;font-weight:600;}" +
-      ".arc-sub{font-size:11px;opacity:.85;}" +
-      ".arc-close{margin-left:auto;background:transparent;border:none;color:#fff;cursor:pointer;font-size:20px;line-height:1;padding:4px 8px;}" +
-      ".arc-body{flex:1;overflow-y:auto;padding:16px;background:#f8f7f4;display:flex;flex-direction:column;gap:10px;}" +
-      ".arc-msg{max-width:85%;padding:10px 14px;border-radius:16px;font-size:13px;color:#111;white-space:pre-wrap;}" +
-      ".arc-msg.arc-bot{background:#fff;border:1px solid #ececec;border-top-left-radius:4px;align-self:flex-start;}" +
-      ".arc-msg.arc-user{background:" +
-      c +
-      ";color:#fff;border-top-right-radius:4px;align-self:flex-end;}" +
-      ".arc-msg.arc-typing{opacity:.55;letter-spacing:2px;}" +
-      ".arc-quick{display:flex;flex-wrap:wrap;gap:6px;padding:10px 12px;border-top:1px solid #ececec;background:#fff;}" +
-      ".arc-chip{background:#fff;border:1px solid " +
-      c +
-      ";color:" +
-      c +
-      ";padding:6px 12px;border-radius:9999px;font-size:12px;font-weight:500;cursor:pointer;text-decoration:none;display:inline-block;}" +
-      ".arc-chip:hover{background:" +
-      c +
-      ";color:#fff;}" +
-      ".arc-input-row{display:flex;gap:8px;padding:10px 12px;border-top:1px solid #ececec;background:#fff;}" +
-      ".arc-input{flex:1;border:1px solid #e3e3e3;border-radius:9999px;padding:8px 14px;font-size:13px;outline:none;}" +
-      ".arc-input:focus{border-color:" +
-      c +
-      ";}" +
-      ".arc-send{background:" +
-      c +
-      ";color:#fff;border:none;border-radius:9999px;padding:8px 14px;font-size:12px;font-weight:600;cursor:pointer;}";
+      ".arc-header{display:flex;align-items:center;gap:12px;padding:16px 18px;background:#fff;border-bottom:1px solid #f0f0f0;}" +
+      ".arc-ava{position:relative;}" +
+      ".arc-ava-dot{width:36px;height:36px;border-radius:9999px;background:" + c + ";display:flex;align-items:center;justify-content:center;color:#fff;}" +
+      ".arc-ava-dot svg{width:16px;height:16px;}" +
+      ".arc-online{position:absolute;bottom:-1px;right:-1px;width:10px;height:10px;border-radius:9999px;background:#10b981;border:2px solid #fff;}" +
+      ".arc-htext{flex:1;line-height:1.2;}" +
+      ".arc-title{font-size:13px;font-weight:600;color:#18181b;}" +
+      ".arc-sub{font-size:11px;color:#71717a;}" +
+      ".arc-close{background:transparent;border:none;color:#a1a1aa;cursor:pointer;font-size:20px;line-height:1;padding:6px;border-radius:9999px;}" +
+      ".arc-close:hover{background:#f4f4f5;color:#3f3f46;}" +
+      ".arc-body{flex:1;overflow-y:auto;padding:18px;background:#fafafa;display:flex;flex-direction:column;gap:12px;}" +
+      ".arc-row{display:flex;align-items:flex-end;gap:8px;}" +
+      ".arc-row.arc-u{justify-content:flex-end;}" +
+      ".arc-bava{width:26px;height:26px;border-radius:9999px;background:" + c + ";color:#fff;font-size:10px;font-weight:600;display:flex;align-items:center;justify-content:center;flex-shrink:0;}" +
+      ".arc-msg{max-width:84%;padding:10px 14px;font-size:13.5px;line-height:1.5;white-space:pre-wrap;box-shadow:0 1px 2px rgba(0,0,0,.04);}" +
+      ".arc-msg.arc-bot{background:#fff;border:1px solid #ececef;color:#27272a;border-radius:16px;border-bottom-left-radius:5px;}" +
+      ".arc-msg.arc-user{background:" + c + ";color:#fff;border-radius:16px;border-bottom-right-radius:5px;}" +
+      ".arc-typing{display:flex;gap:4px;align-items:center;padding:13px 14px;}" +
+      ".arc-typing span{width:6px;height:6px;border-radius:9999px;background:#c4c4cc;display:inline-block;animation:arc-bounce 1.2s infinite ease-in-out;}" +
+      ".arc-typing span:nth-child(1){animation-delay:-.24s;}.arc-typing span:nth-child(2){animation-delay:-.12s;}" +
+      "@keyframes arc-bounce{0%,80%,100%{transform:scale(.6);opacity:.5;}40%{transform:scale(1);opacity:1;}}" +
+      ".arc-quick{display:flex;flex-wrap:wrap;gap:6px;padding:10px 14px 0;background:#fff;border-top:1px solid #f0f0f0;}" +
+      ".arc-chip{background:#fff;border:1px solid #e4e4e7;color:#3f3f46;padding:7px 13px;border-radius:9999px;font-size:12px;font-weight:500;cursor:pointer;transition:all .15s;}" +
+      ".arc-chip:hover{background:#18181b;border-color:#18181b;color:#fff;}" +
+      ".arc-input-row{display:flex;gap:8px;align-items:center;padding:12px;background:#fff;border-top:1px solid #f0f0f0;}" +
+      ".arc-input{flex:1;border:1px solid #e4e4e7;background:#fafafa;border-radius:9999px;padding:10px 16px;font-size:13.5px;outline:none;transition:all .15s;color:#18181b;}" +
+      ".arc-input:focus{background:#fff;border-color:" + c + ";}" +
+      ".arc-send{width:38px;height:38px;flex-shrink:0;background:" + c + ";color:#fff;border:none;border-radius:9999px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:opacity .15s;}" +
+      ".arc-send:disabled{opacity:.4;cursor:not-allowed;}" +
+      ".arc-send svg{width:16px;height:16px;}";
 
     var existing = document.querySelector("style[data-arc]");
     if (existing) existing.remove();
@@ -125,10 +111,18 @@
     document.head.appendChild(style);
   }
 
-  function addMsg(container, text, who) {
-    var m = el("div", "arc-msg " + (who === "user" ? "arc-user" : "arc-bot"), escapeHtml(text));
-    container.appendChild(m);
-    container.scrollTop = container.scrollHeight;
+  function appendBot(body, text) {
+    var row = el("div", "arc-row arc-b");
+    row.appendChild(el("div", "arc-bava", escapeHtml(initial())));
+    row.appendChild(el("div", "arc-msg arc-bot", escapeHtml(text)));
+    body.appendChild(row);
+    body.scrollTop = body.scrollHeight;
+  }
+  function appendUser(body, text) {
+    var row = el("div", "arc-row arc-u");
+    row.appendChild(el("div", "arc-msg arc-user", escapeHtml(text)));
+    body.appendChild(row);
+    body.scrollTop = body.scrollHeight;
   }
 
   function build() {
@@ -144,23 +138,22 @@
     var win = el("div", "arc-window");
 
     var header = el("div", "arc-header");
-    header.appendChild(
-      el(
-        "div",
-        "arc-avatar",
-        '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l1.5 4.5L18 8l-4.5 1.5L12 14l-1.5-4.5L6 8l4.5-1.5z"/></svg>'
-      )
+    var ava = el("div", "arc-ava");
+    ava.appendChild(
+      el("div", "arc-ava-dot", '<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l1.5 4.5L18 8l-4.5 1.5L12 14l-1.5-4.5L6 8l4.5-1.5z"/></svg>')
     );
-    var titleWrap = el("div");
-    titleWrap.appendChild(el("div", "arc-title", escapeHtml(cfg.conciergeName)));
-    titleWrap.appendChild(el("div", "arc-sub", "Online now"));
-    header.appendChild(titleWrap);
+    ava.appendChild(el("span", "arc-online"));
+    header.appendChild(ava);
+    var htext = el("div", "arc-htext");
+    htext.appendChild(el("div", "arc-title", escapeHtml(cfg.conciergeName)));
+    htext.appendChild(el("div", "arc-sub", "Online now"));
+    header.appendChild(htext);
     var close = el("button", "arc-close", "×");
     close.setAttribute("aria-label", "Close chat");
     header.appendChild(close);
 
     var body = el("div", "arc-body");
-    body.appendChild(el("div", "arc-msg arc-bot", escapeHtml(cfg.welcomeMessage)));
+    appendBot(body, cfg.welcomeMessage);
 
     var quick = el("div", "arc-quick");
     [cfg.reservationLabel, cfg.orderLabel, cfg.cateringLabel].forEach(function (label) {
@@ -174,8 +167,12 @@
 
     var inputRow = el("div", "arc-input-row");
     var input = el("input", "arc-input");
-    input.setAttribute("placeholder", "Type a message…");
-    var send = el("button", "arc-send", "Send");
+    input.setAttribute("placeholder", "Ask about reservations, menu, hours…");
+    var send = el(
+      "button",
+      "arc-send",
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>'
+    );
     inputRow.appendChild(input);
     inputRow.appendChild(send);
 
@@ -185,26 +182,25 @@
       var v = (text != null ? text : input.value).trim();
       if (!v || busy) return;
       input.value = "";
-      addMsg(body, v, "user");
+      if (quick.parentNode) quick.style.display = "none";
+      appendUser(body, v);
       chatHistory.push({ role: "user", content: v });
 
       busy = true;
       send.setAttribute("disabled", "true");
-      var typing = el("div", "arc-msg arc-bot arc-typing", "…");
+      var typing = el("div", "arc-row arc-b");
+      typing.appendChild(el("div", "arc-bava", escapeHtml(initial())));
+      var tBubble = el("div", "arc-msg arc-bot arc-typing", "<span></span><span></span><span></span>");
+      typing.appendChild(tBubble);
       body.appendChild(typing);
       body.scrollTop = body.scrollHeight;
 
       fetch(apiBase + "/api/concierge", {
         method: "POST",
         // text/plain keeps this a CORS "simple request" (no preflight), so it
-        // works when the widget is embedded on a different origin (e.g. Wix).
-        // The server parses the JSON body regardless of content-type.
+        // works embedded on another origin (e.g. Wix).
         headers: { "Content-Type": "text/plain;charset=UTF-8" },
-        body: JSON.stringify({
-          restaurantId: restaurantId,
-          question: v,
-          history: chatHistory.slice(-8),
-        }),
+        body: JSON.stringify({ restaurantId: restaurantId, question: v, history: chatHistory.slice(-8) }),
       })
         .then(function (res) {
           return res.json().then(function (data) {
@@ -212,17 +208,14 @@
           });
         })
         .then(function (r) {
-          var reply =
-            r.ok && r.data && r.data.answer
-              ? r.data.answer
-              : (r.data && r.data.error) || "Sorry, something went wrong. Please try again.";
+          var reply = r.ok && r.data && r.data.answer ? r.data.answer : (r.data && r.data.error) || "Sorry, something went wrong. Please try again.";
           chatHistory.push({ role: "assistant", content: reply });
           if (typing.parentNode) typing.parentNode.removeChild(typing);
-          addMsg(body, reply, "bot");
+          appendBot(body, reply);
         })
         .catch(function () {
           if (typing.parentNode) typing.parentNode.removeChild(typing);
-          addMsg(body, "Sorry, I couldn't reach the concierge. Please try again.", "bot");
+          appendBot(body, "Sorry, I couldn't reach the concierge. Please try again.");
         })
         .then(function () {
           busy = false;
@@ -281,8 +274,6 @@
   }
 
   function init() {
-    // Fetch live appearance config, then render. If it fails, render with the
-    // snippet's data-* attributes so the widget still appears.
     var url = apiBase + "/api/widget-config?r=" + encodeURIComponent(restaurantId);
     fetch(url)
       .then(function (res) {

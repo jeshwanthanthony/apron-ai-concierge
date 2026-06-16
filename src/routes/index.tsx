@@ -1,5 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
 import { Sparkles, MessageCircle, Utensils, ArrowRight, Check } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -14,6 +16,14 @@ export const Route = createFileRoute("/")({
 });
 
 function Landing() {
+  const [signedIn, setSignedIn] = useState(false);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => setSignedIn(!!data.session));
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, session) => setSignedIn(!!session));
+    return () => subscription.unsubscribe();
+  }, []);
+
   return (
     <div className="min-h-screen bg-background">
       {/* Nav */}
@@ -26,15 +36,26 @@ function Landing() {
             <span className="text-base font-semibold tracking-tight">Maitre</span>
           </div>
           <div className="flex items-center gap-3">
-            <Link to="/auth" className="text-sm font-medium text-muted-foreground hover:text-foreground">
-              Sign in
-            </Link>
-            <Link
-              to="/auth"
-              className="inline-flex items-center gap-1.5 rounded-full bg-foreground px-4 py-2 text-sm font-medium text-background transition hover:opacity-90"
-            >
-              Get started <ArrowRight className="h-3.5 w-3.5" />
-            </Link>
+            {signedIn ? (
+              <Link
+                to="/dashboard"
+                className="inline-flex items-center gap-1.5 rounded-full bg-foreground px-4 py-2 text-sm font-medium text-background transition hover:opacity-90"
+              >
+                Go to dashboard <ArrowRight className="h-3.5 w-3.5" />
+              </Link>
+            ) : (
+              <>
+                <Link to="/auth" className="text-sm font-medium text-muted-foreground hover:text-foreground">
+                  Sign in
+                </Link>
+                <Link
+                  to="/auth"
+                  className="inline-flex items-center gap-1.5 rounded-full bg-foreground px-4 py-2 text-sm font-medium text-background transition hover:opacity-90"
+                >
+                  Get started <ArrowRight className="h-3.5 w-3.5" />
+                </Link>
+              </>
+            )}
           </div>
         </nav>
       </header>

@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,7 +10,7 @@ import { extractPdfText, ingestMenu } from "@/lib/pdf-client";
 import {
   Utensils, FileText, Check, Sparkles, Copy, Pencil, LogOut, Loader2, AlertCircle,
   Plus, Trash2, Save, X, MessageSquare, RefreshCw, Upload, HelpCircle, Sparkle,
-  Palette, Clock, TrendingUp, Hash,
+  Palette, Clock, TrendingUp, Hash, Send, RotateCcw,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -58,7 +58,7 @@ function Dashboard() {
     <div className="min-h-screen bg-background">
       <header className="border-b border-border bg-background/90 px-6 py-4 backdrop-blur sm:px-10">
         <div className="mx-auto flex max-w-6xl items-center justify-between">
-          <Link to="/" className="flex items-center gap-2">
+          <Link to="/dashboard" className="flex items-center gap-2">
             <div className="grid h-8 w-8 place-items-center rounded-lg bg-gradient-hero text-primary-foreground">
               <Utensils className="h-3.5 w-3.5" />
             </div>
@@ -309,18 +309,25 @@ function AppearanceCard({ r, onSaved }: { r: any; onSaved: (fields: Record<strin
 type Msg = { role: "user" | "assistant"; content: string };
 
 function ConciergeTester({ r }: { r: any }) {
-  const color = r.brand_color || "#7c3aed";
-  const [messages, setMessages] = useState<Msg[]>([
-    { role: "assistant", content: r.welcome_message || "Hi there! 👋 How can I help you today?" },
-  ]);
+  const accent = r.brand_color || "#7c3aed";
+  const name = r.concierge_name || "Concierge";
+  const welcome = r.welcome_message || "Hi there! 👋 How can I help you today?";
+  const suggestions = [r.reservation_button_label, r.order_button_label, r.catering_button_label].filter(Boolean) as string[];
+
+  const [messages, setMessages] = useState<Msg[]>([{ role: "assistant", content: welcome }]);
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
+  }, [messages, busy]);
 
   const ask = async (text?: string) => {
     const q = (text ?? input).trim();
     if (!q || busy) return;
     setInput("");
-    const history = messages.filter((m) => m.role === "user" || m.role === "assistant").slice(-8);
+    const history = messages.slice(-8);
     setMessages((m) => [...m, { role: "user", content: q }]);
     setBusy(true);
     try {
@@ -339,42 +346,99 @@ function ConciergeTester({ r }: { r: any }) {
     }
   };
 
+  const reset = () => setMessages([{ role: "assistant", content: welcome }]);
+  const initial = (name.charAt(0) || "C").toUpperCase();
+
   return (
     <Card title="Test Your Concierge">
       <p className="text-sm text-muted-foreground">
-        Chat with your live AI concierge right here — the same answers guests get. Great for testing without installing the widget.
+        Chat with your live AI concierge — the exact experience your guests get. No widget install needed.
       </p>
-      <div className="mt-4 overflow-hidden rounded-2xl border border-border">
-        <div className="flex h-[360px] flex-col bg-warm/10">
-          <div className="flex-1 space-y-2.5 overflow-y-auto p-4">
-            {messages.map((m, i) => (
-              <div
-                key={i}
-                className={cn(
-                  "max-w-[85%] whitespace-pre-wrap rounded-2xl px-3.5 py-2 text-sm",
-                  m.role === "user" ? "ml-auto rounded-tr-sm text-white" : "rounded-tl-sm border border-border bg-card",
-                )}
-                style={m.role === "user" ? { background: color } : undefined}
-              >
-                {m.content}
-              </div>
-            ))}
-            {busy && <div className="max-w-[85%] rounded-2xl rounded-tl-sm border border-border bg-card px-3.5 py-2 text-sm opacity-60">…</div>}
+
+      <div className="mt-4 overflow-hidden rounded-[20px] border border-border bg-card shadow-elegant">
+        {/* Header */}
+        <div className="flex items-center gap-3 border-b border-border px-5 py-4">
+          <div className="relative">
+            <div className="grid h-9 w-9 place-items-center rounded-full text-white" style={{ background: accent }}>
+              <Sparkles className="h-3.5 w-3.5" strokeWidth={1.5} />
+            </div>
+            <span className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-emerald-500 ring-2 ring-card" />
           </div>
-          <div className="flex gap-2 border-t border-border bg-background p-3">
-            <Input
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={(e) => { if (e.key === "Enter") ask(); }}
-              placeholder="Ask about your menu, hours, reservations…"
-              className="h-10 rounded-full"
-              disabled={busy}
-            />
-            <Button onClick={() => ask()} disabled={busy} className="rounded-full" style={{ background: color }}>
-              {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : "Send"}
-            </Button>
+          <div className="flex-1 leading-tight">
+            <div className="text-[13px] font-semibold tracking-tight">{name}</div>
+            <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+              <span>Online</span><span className="opacity-40">·</span><span>Live preview</span>
+            </div>
+          </div>
+          <button onClick={reset} className="rounded-full p-1.5 text-muted-foreground transition hover:bg-muted hover:text-foreground" aria-label="Reset chat" title="Reset">
+            <RotateCcw className="h-3.5 w-3.5" />
+          </button>
+        </div>
+
+        {/* Messages */}
+        <div ref={scrollRef} className="h-[360px] overflow-y-auto bg-warm/10 px-5 py-5">
+          <div className="flex flex-col gap-3">
+            {messages.map((m, i) =>
+              m.role === "user" ? (
+                <div key={i} className="flex justify-end">
+                  <div className="max-w-[85%] whitespace-pre-wrap rounded-2xl rounded-br-md px-3.5 py-2.5 text-sm leading-relaxed text-white shadow-sm" style={{ background: accent }}>
+                    {m.content}
+                  </div>
+                </div>
+              ) : (
+                <div key={i} className="flex items-end gap-2">
+                  <div className="grid h-7 w-7 shrink-0 place-items-center rounded-full text-[10px] font-semibold text-white" style={{ background: accent }}>{initial}</div>
+                  <div className="max-w-[85%] whitespace-pre-wrap rounded-2xl rounded-bl-md border border-border bg-card px-3.5 py-2.5 text-sm leading-relaxed shadow-sm">
+                    {m.content}
+                  </div>
+                </div>
+              ),
+            )}
+            {busy && (
+              <div className="flex items-end gap-2">
+                <div className="grid h-7 w-7 shrink-0 place-items-center rounded-full text-[10px] font-semibold text-white" style={{ background: accent }}>{initial}</div>
+                <div className="rounded-2xl rounded-bl-md border border-border bg-card px-3.5 py-3 shadow-sm">
+                  <span className="flex items-center gap-1">
+                    <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-muted-foreground/50 [animation-delay:-0.3s]" />
+                    <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-muted-foreground/50 [animation-delay:-0.15s]" />
+                    <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-muted-foreground/50" />
+                  </span>
+                </div>
+              </div>
+            )}
           </div>
         </div>
+
+        {/* Suggestions */}
+        {messages.length <= 1 && !busy && suggestions.length > 0 && (
+          <div className="flex flex-wrap gap-1.5 border-t border-border bg-card px-5 pt-3">
+            {suggestions.map((s) => (
+              <button key={s} onClick={() => ask(s)} className="rounded-full border border-border bg-card px-3 py-1.5 text-xs font-medium text-foreground transition hover:bg-foreground hover:text-background">
+                {s}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* Composer */}
+        <form onSubmit={(e) => { e.preventDefault(); ask(); }} className="flex items-center gap-2 border-t border-border bg-card px-3 py-3">
+          <input
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            placeholder="Ask about reservations, menu, hours…"
+            disabled={busy}
+            className="flex-1 rounded-full border border-border bg-warm/20 px-4 py-2.5 text-sm outline-none transition placeholder:text-muted-foreground focus:bg-background"
+          />
+          <button
+            type="submit"
+            disabled={busy || !input.trim()}
+            className="grid h-9 w-9 shrink-0 place-items-center rounded-full text-white transition disabled:cursor-not-allowed disabled:opacity-40"
+            style={{ background: accent }}
+            aria-label="Send"
+          >
+            {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
+          </button>
+        </form>
       </div>
     </Card>
   );
