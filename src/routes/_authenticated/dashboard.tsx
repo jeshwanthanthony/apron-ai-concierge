@@ -10,7 +10,7 @@ import { extractPdfText, ingestMenu } from "@/lib/pdf-client";
 import {
   Utensils, FileText, Check, Sparkles, Copy, Pencil, LogOut, Loader2, AlertCircle,
   Plus, Trash2, Save, X, MessageSquare, RefreshCw, Upload, HelpCircle, Sparkle,
-  Palette, Clock, TrendingUp, Hash, Send, RotateCcw,
+  Palette, Clock, TrendingUp, Hash, Send, RotateCcw, Store, Code2,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -70,14 +70,14 @@ function Dashboard() {
         </div>
       </header>
 
-      <div className="mx-auto max-w-6xl px-6 py-10 sm:px-10 sm:py-14">
+      <div className="mx-auto max-w-6xl px-6 py-10 sm:px-10 sm:py-12">
         <div>
           <p className="text-xs font-medium uppercase tracking-wider text-accent">Dashboard</p>
           <h1 className="mt-2 text-3xl font-semibold tracking-tight sm:text-4xl">{r.name || "Your restaurant"}</h1>
           <p className="mt-1 text-muted-foreground">{r.cuisine_type || "Welcome back"}</p>
         </div>
 
-        <div className="mt-10 grid gap-6 lg:grid-cols-3">
+        <div className="mt-8 grid gap-4 sm:grid-cols-3">
           <StatusCard title="AI Concierge" status="ready" label="Live" icon={<Sparkles className="h-4 w-4" />} detail={r.concierge_name || "Concierge"} />
           <StatusCard
             title="Menu Upload"
@@ -89,17 +89,95 @@ function Dashboard() {
           <StatusCard title="Widget" status="ready" label="Ready to install" icon={<Check className="h-4 w-4" />} detail="Copy snippet below" />
         </div>
 
-        <div className="mt-8 space-y-6">
-          <ProfileCard r={r} onSaved={patch} />
-          <AppearanceCard r={r} onSaved={patch} />
-          <ConciergeTester r={r} />
-          <MenuCard r={r} onUpdated={(path) => patch({ menu_pdf_path: path })} />
-          <QASection restaurantId={r.id} />
-          <HistorySection restaurantId={r.id} />
-          <WidgetInstallCard r={r} />
+        {/* Sticky section nav + content */}
+        <div className="mt-10 gap-10 lg:grid lg:grid-cols-[210px_1fr]">
+          <aside className="hidden lg:block">
+            <div className="sticky top-8">
+              <SideNav />
+            </div>
+          </aside>
+
+          <div className="space-y-8">
+            <section id="profile" className="scroll-mt-8 space-y-6">
+              <ProfileCard r={r} onSaved={patch} />
+            </section>
+
+            <section id="concierge" className="scroll-mt-8 space-y-6">
+              <AppearanceCard r={r} onSaved={patch} />
+              <ConciergeTester r={r} />
+            </section>
+
+            <section id="menu" className="scroll-mt-8 space-y-6">
+              <MenuCard r={r} onUpdated={(path) => patch({ menu_pdf_path: path })} />
+              <QASection restaurantId={r.id} />
+            </section>
+
+            <section id="history" className="scroll-mt-8">
+              <HistorySection restaurantId={r.id} />
+            </section>
+
+            <section id="install" className="scroll-mt-8">
+              <WidgetInstallCard r={r} />
+            </section>
+          </div>
         </div>
       </div>
     </div>
+  );
+}
+
+/* ------------------------- Sticky section navigation ------------------------ */
+
+const SECTIONS = [
+  { id: "profile", label: "Restaurant Profile", icon: Store },
+  { id: "concierge", label: "Chatbot & Preview", icon: Sparkles },
+  { id: "menu", label: "Menu & Q&A", icon: FileText },
+  { id: "history", label: "Guest Questions", icon: MessageSquare },
+  { id: "install", label: "Install Widget", icon: Code2 },
+] as const;
+
+function SideNav() {
+  const [active, setActive] = useState<string>(SECTIONS[0].id);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const visible = entries
+          .filter((e) => e.isIntersecting)
+          .sort((a, b) => b.intersectionRatio - a.intersectionRatio);
+        if (visible[0]) setActive(visible[0].target.id);
+      },
+      { rootMargin: "-25% 0px -60% 0px", threshold: [0, 0.2, 0.5, 1] },
+    );
+    SECTIONS.forEach((s) => {
+      const el = document.getElementById(s.id);
+      if (el) observer.observe(el);
+    });
+    return () => observer.disconnect();
+  }, []);
+
+  const go = (id: string) => document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
+
+  return (
+    <nav className="space-y-1">
+      <p className="px-3 pb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Manage</p>
+      {SECTIONS.map((s) => {
+        const on = active === s.id;
+        return (
+          <button
+            key={s.id}
+            onClick={() => go(s.id)}
+            className={cn(
+              "flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-sm font-medium transition",
+              on ? "bg-foreground text-background shadow-sm" : "text-muted-foreground hover:bg-muted hover:text-foreground",
+            )}
+          >
+            <s.icon className="h-4 w-4 shrink-0" />
+            {s.label}
+          </button>
+        );
+      })}
+    </nav>
   );
 }
 
