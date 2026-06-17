@@ -223,7 +223,12 @@ function ProfileCard({ r, onSaved }: { r: any; onSaved: (fields: Record<string, 
       <Card title="Restaurant Profile">
         <div className="mb-5 flex items-center justify-between gap-3">
           <p className="text-sm text-muted-foreground">The core information your concierge uses to answer guests.</p>
-          <Button size="sm" variant="outline" onClick={startEdit} className="shrink-0 rounded-full"><Pencil className="mr-1.5 h-3.5 w-3.5" /> Edit</Button>
+          <div className="flex shrink-0 items-center gap-2">
+            <Button asChild size="sm" variant="ghost" className="rounded-full">
+              <a href="/onboarding?edit=1">Hours, allergens &amp; more</a>
+            </Button>
+            <Button size="sm" variant="outline" onClick={startEdit} className="rounded-full"><Pencil className="mr-1.5 h-3.5 w-3.5" /> Edit</Button>
+          </div>
         </div>
         <dl className="grid gap-x-8 gap-y-4 sm:grid-cols-2">
           <Detail label="Name" value={r.name} />

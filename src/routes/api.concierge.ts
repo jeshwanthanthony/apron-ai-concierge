@@ -27,6 +27,33 @@ const json = (body: unknown, status = 200) =>
 
 type HistoryItem = { role: "user" | "assistant"; content: string };
 
+const DAY_ORDER = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
+const DAY_LABELS: Record<string, string> = { mon: "Mon", tue: "Tue", wed: "Wed", thu: "Thu", fri: "Fri", sat: "Sat", sun: "Sun" };
+
+function formatHours(hours: any): string {
+  if (!hours || typeof hours !== "object") return "";
+  const parts: string[] = [];
+  for (const d of DAY_ORDER) {
+    const h = hours[d];
+    if (!h) continue;
+    if (h.closed) {
+      parts.push(`${DAY_LABELS[d]}: Closed`);
+    } else if (h.open && h.close) {
+      let s = `${DAY_LABELS[d]}: ${h.open}–${h.close}`;
+      if (h.kitchen_close) s += ` (kitchen until ${h.kitchen_close})`;
+      parts.push(s);
+    }
+  }
+  return parts.join("; ");
+}
+
+function petLabel(v: string): string {
+  return v === "patio" ? "Dogs welcome on the patio" : v === "service_only" ? "Service animals only" : v === "none" ? "No pets allowed" : "";
+}
+function dressLabel(v: string): string {
+  return v === "casual" ? "Casual" : v === "smart_casual" ? "Smart casual" : v === "business_formal" ? "Business / formal attire" : "";
+}
+
 function buildContextPrompt(ctx: Record<string, any>): string {
   const lines: string[] = [];
   const add = (label: string, v: unknown) => {
@@ -39,10 +66,29 @@ function buildContextPrompt(ctx: Record<string, any>): string {
   add("Phone", ctx.phone);
   add("Email", ctx.email);
   add("Website", ctx.website_url);
+
+  const hoursStr = formatHours(ctx.hours);
+  if (hoursStr) lines.push(`Hours: ${hoursStr}`);
+  add("Holiday & special hours", ctx.holiday_hours);
+
   add("Popular dishes", ctx.popular_dishes);
-  add("Parking", ctx.parking_info);
+  add("Daily specials", ctx.daily_specials);
+  add("Parking & transit", ctx.parking_info);
   add("Delivery & pickup", ctx.delivery_pickup);
-  add("Allergy info", ctx.allergy_info);
+
+  const pets = petLabel(ctx.pet_policy);
+  if (pets) lines.push(`Pet policy: ${pets}`);
+  const dress = dressLabel(ctx.dress_code);
+  if (dress) lines.push(`Dress code: ${dress}`);
+
+  const allergens: string[] = Array.isArray(ctx.allergens) ? ctx.allergens : [];
+  if (allergens.length) {
+    lines.push(
+      `Allergens present in the kitchen: ${allergens.join(", ")}. If a guest mentions a severe allergy, always remind them to notify staff on arrival.`,
+    );
+  }
+  add("Allergen & safety note", ctx.allergy_info);
+
   add("Reservation link", ctx.reservation_link);
   add("Online ordering link", ctx.order_online_link);
   add("Catering link", ctx.catering_link);
@@ -72,20 +118,30 @@ async function askOpenAI(opts: {
   context: string;
   conciergeName: string;
   restaurantName: string;
+  tone?: string;
   history: HistoryItem[];
   question: string;
 }): Promise<string> {
+  const toneLine =
+    opts.tone === "casual"
+      ? "Speak casually and warmly, like a friendly neighborhood spot — relaxed, upbeat, and approachable."
+      : opts.tone === "formal"
+        ? "Speak with polished, refined hospitality, like an upscale fine-dining maître d' — gracious and composed."
+        : "Speak warmly and professionally — friendly but composed.";
+
   const system =
-    `You are ${opts.conciergeName || "the concierge"}, the warm, charming AI host for ${opts.restaurantName || "this restaurant"} — think of a gracious five-star maître d' who genuinely loves welcoming guests.\n\n` +
+    `You are ${opts.conciergeName || "the concierge"}, the AI host for ${opts.restaurantName || "this restaurant"} — a gracious host who genuinely loves welcoming guests.\n\n` +
     "Voice & style:\n" +
-    "- Be warm, personable, and genuinely engaging — never robotic or curt. Let a little personality and hospitality show.\n" +
-    "- Write 2-4 flowing sentences (a touch longer when the guest clearly wants detail). Paint a small, inviting picture rather than giving a flat one-liner.\n" +
-    "- Open with a brief, friendly acknowledgement, then answer, then — when natural — a gentle next step or invitation (e.g. offer to share the reservation link, or suggest a dish).\n" +
+    `- ${toneLine}\n` +
+    "- Be personable and genuinely engaging — never robotic or curt.\n" +
+    "- Write 2-4 flowing sentences (a touch longer when the guest clearly wants detail). Paint a small, inviting picture rather than a flat one-liner.\n" +
+    "- Open with a brief, friendly acknowledgement, then answer, then — when natural — a gentle next step or invitation (e.g. offer the reservation link, or suggest a dish).\n" +
     "- An occasional tasteful emoji (✨🍷🥂🌿) is welcome when it fits; never overdo it. No markdown headings; keep any list to 3 items max.\n\n" +
     "Accuracy:\n" +
     "- Ground every fact in the RESTAURANT INFORMATION and MENU below; prefer the owner-provided Q&A when it fits.\n" +
     "- When a guest wants to book, order, or cater, share the matching link if provided.\n" +
     "- If a specific detail isn't given, say so gracefully and offer to connect them with the restaurant — never invent prices, hours, or dishes.\n" +
+    "- For severe-allergy questions, be careful: share what's known and always advise notifying staff on arrival.\n" +
     "- Recommend popular or fitting dishes when it helps, drawn only from the menu/info. Match the guest's language.\n\n" +
     "=== RESTAURANT INFORMATION ===\n" +
     opts.context;
@@ -196,6 +252,7 @@ export const Route = createFileRoute("/api/concierge")({
               context,
               conciergeName: ctx.concierge_name,
               restaurantName: ctx.name,
+              tone: ctx.bot_tone,
               history,
               question,
             });

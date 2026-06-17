@@ -128,7 +128,9 @@ export type Database = {
       restaurants: {
         Row: {
           address: string | null
+          allergens: string[] | null
           allergy_info: string | null
+          bot_tone: string | null
           brand_color: string | null
           catering_button_label: string | null
           catering_link: string | null
@@ -136,13 +138,18 @@ export type Database = {
           concierge_name: string | null
           created_at: string
           cuisine_type: string | null
+          daily_specials: string | null
           delivery_pickup: string | null
           dietary_gluten_free: boolean
           dietary_halal: boolean
           dietary_vegan: boolean
           dietary_vegetarian: boolean
+          dress_code: string | null
           email: string | null
+          emergency_contact: string | null
           google_maps_link: string | null
+          holiday_hours: string | null
+          hours: Json | null
           id: string
           instagram_link: string | null
           menu_pdf_path: string | null
@@ -153,6 +160,7 @@ export type Database = {
           order_button_label: string | null
           order_online_link: string | null
           parking_info: string | null
+          pet_policy: string | null
           phone: string | null
           popular_dishes: string | null
           reservation_button_label: string | null
@@ -165,7 +173,9 @@ export type Database = {
         }
         Insert: {
           address?: string | null
+          allergens?: string[] | null
           allergy_info?: string | null
+          bot_tone?: string | null
           brand_color?: string | null
           catering_button_label?: string | null
           catering_link?: string | null
@@ -173,13 +183,18 @@ export type Database = {
           concierge_name?: string | null
           created_at?: string
           cuisine_type?: string | null
+          daily_specials?: string | null
           delivery_pickup?: string | null
           dietary_gluten_free?: boolean
           dietary_halal?: boolean
           dietary_vegan?: boolean
           dietary_vegetarian?: boolean
+          dress_code?: string | null
           email?: string | null
+          emergency_contact?: string | null
           google_maps_link?: string | null
+          holiday_hours?: string | null
+          hours?: Json | null
           id?: string
           instagram_link?: string | null
           menu_pdf_path?: string | null
@@ -190,6 +205,7 @@ export type Database = {
           order_button_label?: string | null
           order_online_link?: string | null
           parking_info?: string | null
+          pet_policy?: string | null
           phone?: string | null
           popular_dishes?: string | null
           reservation_button_label?: string | null
@@ -202,7 +218,9 @@ export type Database = {
         }
         Update: {
           address?: string | null
+          allergens?: string[] | null
           allergy_info?: string | null
+          bot_tone?: string | null
           brand_color?: string | null
           catering_button_label?: string | null
           catering_link?: string | null
@@ -210,13 +228,18 @@ export type Database = {
           concierge_name?: string | null
           created_at?: string
           cuisine_type?: string | null
+          daily_specials?: string | null
           delivery_pickup?: string | null
           dietary_gluten_free?: boolean
           dietary_halal?: boolean
           dietary_vegan?: boolean
           dietary_vegetarian?: boolean
+          dress_code?: string | null
           email?: string | null
+          emergency_contact?: string | null
           google_maps_link?: string | null
+          holiday_hours?: string | null
+          hours?: Json | null
           id?: string
           instagram_link?: string | null
           menu_pdf_path?: string | null
@@ -227,6 +250,7 @@ export type Database = {
           order_button_label?: string | null
           order_online_link?: string | null
           parking_info?: string | null
+          pet_policy?: string | null
           phone?: string | null
           popular_dishes?: string | null
           reservation_button_label?: string | null
