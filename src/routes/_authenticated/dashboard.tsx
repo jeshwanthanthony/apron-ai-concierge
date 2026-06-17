@@ -90,14 +90,14 @@ function Dashboard() {
         </div>
 
         {/* Sticky section nav + content */}
-        <div className="mt-10 gap-10 lg:grid lg:grid-cols-[210px_1fr]">
+        <div className="mt-10 gap-10 lg:grid lg:grid-cols-[210px_minmax(0,1fr)]">
           <aside className="hidden lg:block">
             <div className="sticky top-8">
               <SideNav />
             </div>
           </aside>
 
-          <div className="space-y-8">
+          <div className="min-w-0 space-y-8">
             <section id="profile" className="scroll-mt-8 space-y-6">
               <ProfileCard r={r} onSaved={patch} />
             </section>
@@ -302,7 +302,7 @@ function Detail({ label, value }: { label: string; value: any }) {
   return (
     <div>
       <dt className="text-xs uppercase tracking-wider text-muted-foreground">{label}</dt>
-      <dd className="mt-1.5 whitespace-pre-wrap text-sm">{value || <span className="text-muted-foreground">—</span>}</dd>
+      <dd className="mt-1.5 whitespace-pre-wrap break-words text-sm">{value || <span className="text-muted-foreground">—</span>}</dd>
     </div>
   );
 }
@@ -920,9 +920,9 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 
 function StatusCard({ title, status, label, icon, detail }: { title: string; status: "ready" | "missing"; label: string; icon: React.ReactNode; detail: string }) {
   return (
-    <div className="rounded-2xl border border-border bg-gradient-card p-6 shadow-sm">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">{icon}{title}</div>
+    <div className="min-w-0 rounded-2xl border border-border bg-gradient-card p-6 shadow-sm">
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex min-w-0 items-center gap-2 text-sm font-medium text-muted-foreground">{icon}{title}</div>
         <span className={cn(
           "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium",
           status === "ready" ? "bg-success/10 text-success" : "bg-accent/15 text-accent",
