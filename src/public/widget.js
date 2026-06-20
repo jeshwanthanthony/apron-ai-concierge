@@ -67,10 +67,20 @@
     var c = cfg.brandColor;
     var CSS =
       ".arc-root,.arc-root *{box-sizing:border-box;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;}" +
-      ".arc-bubble{position:fixed;bottom:24px;right:24px;width:58px;height:58px;border-radius:9999px;background:" + c + ";color:#fff;border:none;cursor:pointer;box-shadow:0 12px 30px -8px rgba(0,0,0,.4);z-index:2147483646;display:flex;align-items:center;justify-content:center;transition:transform .2s ease;}" +
-      ".arc-bubble:hover{transform:scale(1.06);}" +
-      ".arc-bubble svg{width:26px;height:26px;}" +
-      ".arc-window{position:fixed;bottom:96px;right:24px;width:380px;max-width:calc(100vw - 32px);height:600px;max-height:calc(100vh - 130px);background:#fff;border-radius:20px;box-shadow:0 30px 70px -20px rgba(15,15,25,.4);z-index:2147483647;display:none;flex-direction:column;overflow:hidden;border:1px solid rgba(0,0,0,.06);}" +
+      ".arc-launch{position:fixed;bottom:24px;right:24px;z-index:2147483646;display:flex;flex-direction:column;align-items:flex-end;gap:12px;}" +
+      ".arc-bubble{position:relative;width:64px;height:64px;border-radius:9999px;background:" + c + ";color:#fff;border:none;cursor:pointer;box-shadow:0 10px 26px -6px rgba(0,0,0,.5),0 2px 6px rgba(0,0,0,.18);display:flex;align-items:center;justify-content:center;transition:transform .28s cubic-bezier(.34,1.56,.64,1),box-shadow .28s;}" +
+      ".arc-bubble:hover{transform:scale(1.09) translateY(-2px);box-shadow:0 16px 34px -8px rgba(0,0,0,.55);}" +
+      ".arc-bubble:active{transform:scale(.95);}" +
+      ".arc-bubble svg{width:28px;height:28px;transition:transform .3s ease;}" +
+      ".arc-pulse{position:absolute;inset:0;border-radius:9999px;background:" + c + ";z-index:-1;animation:arc-pulse 2.6s cubic-bezier(.4,0,.6,1) infinite;}" +
+      "@keyframes arc-pulse{0%{transform:scale(1);opacity:.5;}70%{transform:scale(1.7);opacity:0;}100%{transform:scale(1.7);opacity:0;}}" +
+      ".arc-blip{position:absolute;top:3px;right:3px;width:14px;height:14px;border-radius:9999px;background:#22c55e;border:3px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.04);}" +
+      ".arc-greet{position:relative;max-width:248px;background:#fff;color:#27272a;border-radius:18px;border-bottom-right-radius:6px;padding:12px 16px;font-size:13.5px;line-height:1.45;box-shadow:0 16px 36px -12px rgba(0,0,0,.4),0 2px 6px rgba(0,0,0,.08);display:flex;align-items:flex-start;gap:8px;cursor:pointer;opacity:0;transform:translateY(10px) scale(.92);transform-origin:bottom right;transition:opacity .35s ease,transform .35s cubic-bezier(.34,1.56,.64,1);pointer-events:none;}" +
+      ".arc-greet.arc-show{opacity:1;transform:translateY(0) scale(1);pointer-events:auto;}" +
+      ".arc-greet b{font-weight:600;}" +
+      ".arc-greet-x{position:absolute;top:-8px;right:-8px;width:22px;height:22px;border-radius:9999px;background:#fff;color:#9ca3af;border:1px solid #eee;font-size:14px;line-height:1;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,.12);}" +
+      ".arc-greet-x:hover{color:#4b5563;}" +
+      ".arc-window{position:fixed;bottom:104px;right:24px;width:380px;max-width:calc(100vw - 32px);height:600px;max-height:calc(100vh - 140px);background:#fff;border-radius:20px;box-shadow:0 30px 70px -20px rgba(15,15,25,.4);z-index:2147483647;display:none;flex-direction:column;overflow:hidden;border:1px solid rgba(0,0,0,.06);}" +
       ".arc-window.arc-open{display:flex;}" +
       ".arc-header{display:flex;align-items:center;gap:12px;padding:16px 18px;background:#fff;border-bottom:1px solid #f0f0f0;}" +
       ".arc-ava{position:relative;}" +
@@ -125,15 +135,39 @@
     body.scrollTop = body.scrollHeight;
   }
 
+  var CHAT_ICON =
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>';
+  var CLOSE_ICON =
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>';
+
   function build() {
     var root = el("div", "arc-root");
 
-    var bubble = el(
-      "button",
-      "arc-bubble",
-      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>'
+    // Launcher: greeting bubble + the floating action button.
+    var launch = el("div", "arc-launch");
+
+    var greet = el("div", "arc-greet");
+    var greetText = el(
+      "div",
+      null,
+      "<b>" + escapeHtml(cfg.conciergeName) + "</b><br>👋 Hi there! Questions about the menu, hours, or a table? I'm happy to help."
     );
+    var greetX = el("div", "arc-greet-x", "×");
+    greet.appendChild(greetText);
+    greet.appendChild(greetX);
+
+    var bubble = el("button", "arc-bubble");
     bubble.setAttribute("aria-label", "Open chat");
+    var pulse = el("span", "arc-pulse");
+    var iconWrap = el("span", null, CHAT_ICON);
+    iconWrap.style.cssText = "display:flex;align-items:center;justify-content:center;";
+    var blip = el("span", "arc-blip");
+    bubble.appendChild(pulse);
+    bubble.appendChild(iconWrap);
+    bubble.appendChild(blip);
+
+    launch.appendChild(greet);
+    launch.appendChild(bubble);
 
     var win = el("div", "arc-window");
 
@@ -236,17 +270,55 @@
     win.appendChild(quick);
     win.appendChild(inputRow);
 
+    var hasOpened = false;
+    var greetDismissed = false;
+
+    function showGreet() {
+      if (!greetDismissed && !hasOpened) greet.classList.add("arc-show");
+    }
+    function hideGreet() {
+      greet.classList.remove("arc-show");
+    }
+
+    function setOpen(open) {
+      if (open) {
+        win.classList.add("arc-open");
+        iconWrap.innerHTML = CLOSE_ICON;
+        pulse.style.display = "none";
+        blip.style.display = "none";
+        hideGreet();
+        hasOpened = true;
+        setTimeout(function () { try { input.focus(); } catch (e) {} }, 80);
+      } else {
+        win.classList.remove("arc-open");
+        iconWrap.innerHTML = CHAT_ICON;
+      }
+    }
+
     bubble.addEventListener("click", function () {
-      win.classList.toggle("arc-open");
+      setOpen(!win.classList.contains("arc-open"));
     });
     close.addEventListener("click", function () {
-      win.classList.remove("arc-open");
+      setOpen(false);
+    });
+    greet.addEventListener("click", function () {
+      setOpen(true);
+    });
+    greetX.addEventListener("click", function (e) {
+      e.stopPropagation();
+      greetDismissed = true;
+      hideGreet();
+      pulse.style.display = "none";
     });
 
-    root.appendChild(bubble);
+    // Invite a click shortly after load, then tuck away if ignored.
+    setTimeout(showGreet, 2200);
+    setTimeout(function () { if (!hasOpened) hideGreet(); }, 13000);
+
+    root.appendChild(launch);
     root.appendChild(win);
     document.body.appendChild(root);
-    console.log("Widget bubble added to page");
+    console.log("Widget launcher added to page");
   }
 
   function applyConfig(data) {
