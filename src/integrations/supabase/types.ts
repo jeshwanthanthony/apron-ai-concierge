@@ -127,6 +127,7 @@ export type Database = {
       }
       restaurants: {
         Row: {
+          action_buttons: Json | null
           address: string | null
           allergens: string[] | null
           allergy_info: string | null
@@ -172,6 +173,7 @@ export type Database = {
           welcome_message: string | null
         }
         Insert: {
+          action_buttons?: Json | null
           address?: string | null
           allergens?: string[] | null
           allergy_info?: string | null
@@ -217,6 +219,7 @@ export type Database = {
           welcome_message?: string | null
         }
         Update: {
+          action_buttons?: Json | null
           address?: string | null
           allergens?: string[] | null
           allergy_info?: string | null

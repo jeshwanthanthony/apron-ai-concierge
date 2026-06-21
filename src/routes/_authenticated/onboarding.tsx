@@ -50,7 +50,7 @@ const empty: Form = {
   menu_pdf_path: "", catering_menu_pdf_path: "",
   allergens: [], allergy_info: "",
   dietary_vegan: false, dietary_vegetarian: false, dietary_gluten_free: false, dietary_halal: false,
-  concierge_name: "Concierge", brand_color: "#7c3aed", welcome_message: "Hello! How can I help you today?",
+  concierge_name: "Maître AI", brand_color: "#7c3aed", welcome_message: "Hello! How can I help you today?",
   reservation_button_label: "Reserve a Table", order_button_label: "Order Online", catering_button_label: "Catering Inquiry",
 };
 

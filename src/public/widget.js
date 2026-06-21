@@ -43,12 +43,21 @@
   // Defaults from the snippet; live values fetched from the server on load.
   var cfg = {
     brandColor: attr("data-color", "#7c3aed"),
-    conciergeName: attr("data-name", "Concierge"),
+    conciergeName: attr("data-name", "Maître AI"),
     welcomeMessage: attr("data-welcome", "Hi there! 👋 How can I help you today? Ask me about our menu, reservations, or hours."),
     reservationLabel: "Reserve a Table",
     orderLabel: "Order Online",
     cateringLabel: "Catering Inquiry",
+    actions: [],
   };
+  cfg.actions = [
+    { label: cfg.reservationLabel, url: "", image: "" },
+    { label: cfg.orderLabel, url: "", image: "" },
+    { label: cfg.cateringLabel, url: "", image: "" },
+  ];
+
+  var CARD_ICON =
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17L17 7M9 7h8v8"/></svg>';
 
   function escapeHtml(s) {
     return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
@@ -103,9 +112,12 @@
       ".arc-typing span{width:6px;height:6px;border-radius:9999px;background:#c4c4cc;display:inline-block;animation:arc-bounce 1.2s infinite ease-in-out;}" +
       ".arc-typing span:nth-child(1){animation-delay:-.24s;}.arc-typing span:nth-child(2){animation-delay:-.12s;}" +
       "@keyframes arc-bounce{0%,80%,100%{transform:scale(.6);opacity:.5;}40%{transform:scale(1);opacity:1;}}" +
-      ".arc-quick{display:flex;flex-wrap:wrap;gap:6px;padding:10px 14px 0;background:#fff;border-top:1px solid #f0f0f0;}" +
-      ".arc-chip{background:#fff;border:1px solid #e4e4e7;color:#3f3f46;padding:7px 13px;border-radius:9999px;font-size:12px;font-weight:500;cursor:pointer;transition:all .15s;}" +
-      ".arc-chip:hover{background:#18181b;border-color:#18181b;color:#fff;}" +
+      ".arc-quick{display:flex;gap:8px;padding:12px 14px 4px;background:#fff;border-top:1px solid #f0f0f0;}" +
+      ".arc-card{flex:1 1 0;min-width:0;display:flex;flex-direction:column;border:1px solid #ececef;border-radius:14px;overflow:hidden;background:#fff;text-decoration:none;cursor:pointer;transition:transform .15s,box-shadow .15s;}" +
+      ".arc-card:hover{transform:translateY(-2px);box-shadow:0 10px 22px -10px rgba(0,0,0,.3);}" +
+      ".arc-card-img{height:60px;background-size:cover;background-position:center;display:flex;align-items:center;justify-content:center;}" +
+      ".arc-card-img svg{width:22px;height:22px;color:#fff;opacity:.95;}" +
+      ".arc-card-label{padding:7px 6px;font-size:11.5px;font-weight:600;color:#27272a;text-align:center;line-height:1.25;}" +
       ".arc-input-row{display:flex;gap:8px;align-items:center;padding:12px;background:#fff;border-top:1px solid #f0f0f0;}" +
       ".arc-input{flex:1;border:1px solid #e4e4e7;background:#fafafa;border-radius:9999px;padding:10px 16px;font-size:13.5px;outline:none;transition:all .15s;color:#18181b;}" +
       ".arc-input:focus{background:#fff;border-color:" + c + ";}" +
@@ -190,13 +202,32 @@
     appendBot(body, cfg.welcomeMessage);
 
     var quick = el("div", "arc-quick");
-    [cfg.reservationLabel, cfg.orderLabel, cfg.cateringLabel].forEach(function (label) {
-      if (!label) return;
-      var chip = el("button", "arc-chip", escapeHtml(label));
-      chip.addEventListener("click", function () {
-        ask(label);
-      });
-      quick.appendChild(chip);
+    (cfg.actions || []).slice(0, 3).forEach(function (b) {
+      if (!b || (!b.label && !b.url)) return;
+      var card = document.createElement(b.url ? "a" : "button");
+      card.className = "arc-card";
+      if (b.url) {
+        card.href = b.url;
+        card.target = "_blank";
+        card.rel = "noopener noreferrer";
+      } else {
+        card.type = "button";
+      }
+      var img = el("div", "arc-card-img");
+      if (b.image) {
+        img.style.backgroundImage = 'url("' + String(b.image).replace(/"/g, "") + '")';
+      } else {
+        img.style.background = "linear-gradient(135deg," + cfg.brandColor + ",rgba(0,0,0,.3))";
+        img.innerHTML = CARD_ICON;
+      }
+      card.appendChild(img);
+      card.appendChild(el("div", "arc-card-label", escapeHtml(b.label || "Open")));
+      if (!b.url) {
+        card.addEventListener("click", function () {
+          ask(b.label);
+        });
+      }
+      quick.appendChild(card);
     });
 
     var inputRow = el("div", "arc-input-row");
@@ -216,7 +247,6 @@
       var v = (text != null ? text : input.value).trim();
       if (!v || busy) return;
       input.value = "";
-      if (quick.parentNode) quick.style.display = "none";
       appendUser(body, v);
       chatHistory.push({ role: "user", content: v });
 
@@ -329,6 +359,19 @@
     if (data.reservation_button_label) cfg.reservationLabel = data.reservation_button_label;
     if (data.order_button_label) cfg.orderLabel = data.order_button_label;
     if (data.catering_button_label) cfg.cateringLabel = data.catering_button_label;
+
+    if (Array.isArray(data.action_buttons) && data.action_buttons.length) {
+      cfg.actions = data.action_buttons
+        .filter(function (b) { return b && (b.label || b.url); })
+        .slice(0, 3)
+        .map(function (b) { return { label: b.label || "", url: b.url || "", image: b.image || "" }; });
+    } else {
+      cfg.actions = [
+        { label: data.reservation_button_label || cfg.reservationLabel, url: data.reservation_link || "", image: "" },
+        { label: data.order_button_label || cfg.orderLabel, url: data.order_online_link || "", image: "" },
+        { label: data.catering_button_label || cfg.cateringLabel, url: data.catering_link || "", image: "" },
+      ];
+    }
   }
 
   function render() {

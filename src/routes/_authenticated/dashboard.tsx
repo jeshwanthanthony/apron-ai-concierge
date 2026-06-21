@@ -11,6 +11,7 @@ import {
   Utensils, FileText, Check, Sparkles, Copy, Pencil, LogOut, Loader2, AlertCircle,
   Plus, Trash2, Save, X, MessageSquare, RefreshCw, Upload, HelpCircle, Sparkle,
   Palette, Clock, TrendingUp, Hash, Send, RotateCcw, Store, Code2,
+  Image as ImageIcon, ArrowUpRight, Link2,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -78,7 +79,7 @@ function Dashboard() {
         </div>
 
         <div className="mt-8 grid gap-4 sm:grid-cols-3">
-          <StatusCard title="AI Concierge" status="ready" label="Live" icon={<Sparkles className="h-4 w-4" />} detail={r.concierge_name || "Concierge"} />
+          <StatusCard title="AI Concierge" status="ready" label="Live" icon={<Sparkles className="h-4 w-4" />} detail={r.concierge_name || "Maître AI"} />
           <StatusCard
             title="Menu Upload"
             status={menuStatus as any}
@@ -309,33 +310,61 @@ function Detail({ label, value }: { label: string; value: any }) {
 
 /* --------------------- Editable chatbot appearance + preview --------------------- */
 
+type ActionBtn = { label: string; url: string; image: string };
+
 function AppearanceCard({ r, onSaved }: { r: any; onSaved: (fields: Record<string, any>) => void }) {
   const [form, setForm] = useState({
-    concierge_name: r.concierge_name ?? "Concierge",
+    concierge_name: r.concierge_name ?? "Maître AI",
     brand_color: r.brand_color ?? "#7c3aed",
     welcome_message: r.welcome_message ?? "Hi there! 👋 How can I help you today?",
-    reservation_button_label: r.reservation_button_label ?? "Reserve a Table",
-    order_button_label: r.order_button_label ?? "Order Online",
-    catering_button_label: r.catering_button_label ?? "Catering Inquiry",
+  });
+  const [actions, setActions] = useState<ActionBtn[]>(() => {
+    const a = r.action_buttons;
+    if (Array.isArray(a) && a.length) {
+      return a.slice(0, 3).map((b: any) => ({ label: b?.label || "", url: b?.url || "", image: b?.image || "" }));
+    }
+    return [
+      { label: r.reservation_button_label || "Reserve a Table", url: r.reservation_link || "", image: "" },
+      { label: r.order_button_label || "Order Online", url: r.order_online_link || "", image: "" },
+      { label: r.catering_button_label || "Catering Inquiry", url: r.catering_link || "", image: "" },
+    ];
   });
   const [saving, setSaving] = useState(false);
   const set = (k: keyof typeof form, v: string) => setForm((f) => ({ ...f, [k]: v }));
 
+  const setAction = (i: number, patch: Partial<ActionBtn>) =>
+    setActions((a) => a.map((x, idx) => (idx === i ? { ...x, ...patch } : x)));
+  const addAction = () => setActions((a) => (a.length >= 3 ? a : [...a, { label: "New button", url: "", image: "" }]));
+  const removeAction = (i: number) => setActions((a) => a.filter((_, idx) => idx !== i));
+
+  const uploadImage = async (i: number, file: File) => {
+    const path = `${r.user_id}/btn-${Date.now()}-${file.name}`;
+    const up = await supabase.storage.from("logos").upload(path, file, { upsert: true });
+    if (up.error) { toast.error(up.error.message); return; }
+    const { data } = supabase.storage.from("logos").getPublicUrl(path);
+    setAction(i, { image: data.publicUrl });
+    toast.success("Image added");
+  };
+
   const save = async () => {
     setSaving(true);
-    const { error } = await supabase.from("restaurants").update(form).eq("id", r.id);
+    const cleanActions = actions
+      .filter((a) => a.label.trim() || a.url.trim())
+      .map((a) => ({ label: a.label.trim(), url: a.url.trim(), image: a.image }));
+    const payload = { ...form, action_buttons: cleanActions };
+    const { error } = await supabase.from("restaurants").update(payload).eq("id", r.id);
     setSaving(false);
     if (error) { toast.error(error.message); return; }
-    onSaved(form);
+    onSaved(payload);
     toast.success("Appearance saved");
   };
 
   return (
     <Card title="Chatbot Appearance">
-      <p className="text-sm text-muted-foreground">Customize how your concierge looks and greets guests. The preview updates live.</p>
+      <p className="text-sm text-muted-foreground">Customize how your concierge looks, greets guests, and the action buttons it shows. The preview updates live.</p>
       <div className="mt-5 grid gap-8 lg:grid-cols-[1fr_340px]">
         {/* Controls */}
-        <div className="space-y-4">
+        <div className="space-y-5">
           <Field label="Concierge name"><Input className={inputCls} value={form.concierge_name} onChange={(e) => set("concierge_name", e.target.value)} /></Field>
           <Field label="Welcome message"><Textarea className="min-h-[72px] rounded-xl" value={form.welcome_message} onChange={(e) => set("welcome_message", e.target.value)} /></Field>
 
@@ -364,10 +393,50 @@ function AppearanceCard({ r, onSaved }: { r: any; onSaved: (fields: Record<strin
             </div>
           </Field>
 
-          <div className="grid gap-4 sm:grid-cols-3">
-            <Field label="Reserve button"><Input className={inputCls} value={form.reservation_button_label} onChange={(e) => set("reservation_button_label", e.target.value)} /></Field>
-            <Field label="Order button"><Input className={inputCls} value={form.order_button_label} onChange={(e) => set("order_button_label", e.target.value)} /></Field>
-            <Field label="Catering button"><Input className={inputCls} value={form.catering_button_label} onChange={(e) => set("catering_button_label", e.target.value)} /></Field>
+          {/* Action buttons */}
+          <div>
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium">Action buttons <span className="text-muted-foreground">(up to 3)</span></span>
+              {actions.length < 3 && (
+                <Button size="sm" variant="ghost" onClick={addAction} className="rounded-full"><Plus className="mr-1 h-3.5 w-3.5" /> Add</Button>
+              )}
+            </div>
+            <p className="mt-1 text-xs text-muted-foreground">Each becomes a clickable picture-card in the chat that opens its link.</p>
+            <div className="mt-3 space-y-3">
+              {actions.map((a, i) => (
+                <div key={i} className="rounded-2xl border border-border p-3">
+                  <div className="flex items-start gap-3">
+                    {/* Image / upload thumb */}
+                    <label className="group relative grid h-14 w-14 shrink-0 cursor-pointer place-items-center overflow-hidden rounded-xl border border-border bg-warm/30">
+                      {a.image ? (
+                        <img src={a.image} alt="" className="h-full w-full object-cover" />
+                      ) : (
+                        <div className="grid h-full w-full place-items-center text-white" style={{ background: `linear-gradient(135deg, ${form.brand_color}, rgba(0,0,0,.3))` }}>
+                          <ImageIcon className="h-5 w-5 opacity-90" />
+                        </div>
+                      )}
+                      <span className="absolute inset-0 hidden place-items-center bg-black/40 text-[10px] font-medium text-white group-hover:grid">Change</span>
+                      <input type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadImage(i, f); }} />
+                    </label>
+
+                    <div className="min-w-0 flex-1 space-y-2">
+                      <Input className="h-9 rounded-lg" placeholder="Button name (e.g. Reserve a Table)" value={a.label} onChange={(e) => setAction(i, { label: e.target.value })} />
+                      <div className="flex items-center gap-1.5 rounded-lg border border-border px-2">
+                        <Link2 className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                        <input className="h-8 w-full bg-transparent text-sm outline-none" placeholder="https://link-to-open.com" value={a.url} onChange={(e) => setAction(i, { url: e.target.value })} />
+                      </div>
+                    </div>
+
+                    <button onClick={() => removeAction(i)} className="shrink-0 rounded-full p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground" aria-label="Remove button">
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+              {actions.length === 0 && (
+                <p className="rounded-xl border border-dashed border-border p-4 text-center text-sm text-muted-foreground">No buttons. Add up to 3.</p>
+              )}
+            </div>
           </div>
 
           <Button onClick={save} disabled={saving} className="rounded-full bg-gradient-hero shadow-glow">
@@ -377,7 +446,7 @@ function AppearanceCard({ r, onSaved }: { r: any; onSaved: (fields: Record<strin
 
         {/* Live preview */}
         <div>
-          <PreviewWidget r={{ ...r, ...form }} />
+          <PreviewWidget r={{ ...r, ...form }} actions={actions} />
           <div className="mt-3 flex items-center gap-2 text-xs text-muted-foreground">
             <div className="h-1.5 w-1.5 animate-pulse rounded-full bg-success" /> Live preview
           </div>
@@ -393,7 +462,7 @@ type Msg = { role: "user" | "assistant"; content: string };
 
 function ConciergeTester({ r }: { r: any }) {
   const accent = r.brand_color || "#7c3aed";
-  const name = r.concierge_name || "Concierge";
+  const name = r.concierge_name || "Maître AI";
   const welcome = r.welcome_message || "Hi there! 👋 How can I help you today?";
   const suggestions = [r.reservation_button_label, r.order_button_label, r.catering_button_label].filter(Boolean) as string[];
 
@@ -883,7 +952,7 @@ function HistorySection({ restaurantId }: { restaurantId: string }) {
 
 function WidgetInstallCard({ r }: { r: any }) {
   const origin = typeof window !== "undefined" ? window.location.origin : "";
-  const widgetSnippet = `<script src="${origin}/widget.js" data-restaurant="${r.id}" data-color="${r.brand_color || "#7c3aed"}" data-name="${(r.concierge_name || "Concierge").replace(/"/g, "&quot;")}" data-welcome="${(r.welcome_message || "Hello!").replace(/"/g, "&quot;")}" async></script>`;
+  const widgetSnippet = `<script src="${origin}/widget.js" data-restaurant="${r.id}" data-color="${r.brand_color || "#7c3aed"}" data-name="${(r.concierge_name || "Maître AI").replace(/"/g, "&quot;")}" data-welcome="${(r.welcome_message || "Hello!").replace(/"/g, "&quot;")}" async></script>`;
   const copy = () => { navigator.clipboard.writeText(widgetSnippet); toast.success("Snippet copied"); };
 
   return (
@@ -956,13 +1025,23 @@ function PlatformGuide({ name, steps }: { name: string; steps: string[] }) {
   );
 }
 
-function PreviewWidget({ r }: { r: any }) {
+function PreviewWidget({ r, actions }: { r: any; actions?: ActionBtn[] }) {
+  const color = r.brand_color || "#7c3aed";
+  const list = (actions && actions.length
+    ? actions
+    : [
+        { label: r.reservation_button_label, url: "", image: "" },
+        { label: r.order_button_label, url: "", image: "" },
+        { label: r.catering_button_label, url: "", image: "" },
+      ]
+  ).filter((b) => b && (b.label || b.image)).slice(0, 3);
+
   return (
     <div className="overflow-hidden rounded-2xl border border-border shadow-md">
-      <div style={{ background: r.brand_color || "#7c3aed" }} className="flex items-center gap-3 p-4 text-white">
+      <div style={{ background: color }} className="flex items-center gap-3 p-4 text-white">
         <div className="grid h-9 w-9 place-items-center rounded-full bg-white/20"><Sparkles className="h-4 w-4" /></div>
         <div>
-          <div className="text-sm font-semibold">{r.concierge_name || "Concierge"}</div>
+          <div className="text-sm font-semibold">{r.concierge_name || "Maître AI"}</div>
           <div className="text-xs opacity-80">Online</div>
         </div>
       </div>
@@ -970,11 +1049,21 @@ function PreviewWidget({ r }: { r: any }) {
         <div className="max-w-[85%] rounded-2xl rounded-tl-sm bg-muted p-3 text-sm">
           {r.welcome_message || "Hello!"}
         </div>
-        <div className="flex flex-wrap gap-2 pt-2">
-          {[r.reservation_button_label, r.order_button_label, r.catering_button_label].filter(Boolean).map((b: string) => (
-            <span key={b} style={{ borderColor: r.brand_color, color: r.brand_color }} className="rounded-full border bg-background px-3 py-1.5 text-xs font-medium">{b}</span>
-          ))}
-        </div>
+        {list.length > 0 && (
+          <div className="grid grid-cols-3 gap-2 pt-1">
+            {list.map((b, i) => (
+              <div key={i} className="overflow-hidden rounded-xl border border-border">
+                <div
+                  className="grid h-11 place-items-center bg-cover bg-center text-white"
+                  style={b.image ? { backgroundImage: `url(${b.image})` } : { background: `linear-gradient(135deg, ${color}, rgba(0,0,0,.3))` }}
+                >
+                  {!b.image && <ArrowUpRight className="h-3.5 w-3.5" />}
+                </div>
+                <div className="truncate px-1.5 py-1 text-center text-[10px] font-medium">{b.label || "Button"}</div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
