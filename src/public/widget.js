@@ -346,6 +346,14 @@
   }
 
   function init() {
+    var rendered = false;
+    function go() {
+      if (rendered) return;
+      rendered = true;
+      render();
+    }
+    // Fetch live appearance config, but never let a slow/unreachable request
+    // block the launcher — draw it within 1.5s no matter what.
     var url = apiBase + "/api/widget-config?r=" + encodeURIComponent(restaurantId);
     fetch(url)
       .then(function (res) {
@@ -355,9 +363,8 @@
         if (data && !data.error) applyConfig(data);
       })
       .catch(function () {})
-      .then(function () {
-        render();
-      });
+      .then(go);
+    setTimeout(go, 1500);
   }
 
   if (document.readyState === "loading") {
