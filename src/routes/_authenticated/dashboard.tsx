@@ -48,7 +48,7 @@ function Dashboard() {
     })();
   }, [navigate]);
 
-  if (loading || !r) return <div className="grid min-h-screen place-items-center"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>;
+  if (loading || !r) return <div className="grid min-h-screen place-items-center"><Loader2 className="h-6 w-6 animate-spin text-zinc-500" /></div>;
 
   const signOut = async () => { await supabase.auth.signOut(); navigate({ to: "/" }); };
   const patch = (fields: Record<string, any>) => setR((cur) => ({ ...(cur || {}), ...fields }));
@@ -161,10 +161,10 @@ function SideNav() {
             onClick={() => go(s.id)}
             className={cn(
               "flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-[15px] transition",
-              on ? "bg-zinc-100 font-semibold text-zinc-900" : "font-medium text-zinc-500 hover:bg-zinc-50 hover:text-zinc-900",
+              on ? "bg-[#e8f1ff] font-semibold text-[#006aff]" : "font-medium text-zinc-500 hover:bg-zinc-50 hover:text-zinc-900",
             )}
           >
-            <s.icon className={cn("h-4 w-4 shrink-0", on ? "text-zinc-900" : "text-zinc-400")} />
+            <s.icon className={cn("h-4 w-4 shrink-0", on ? "text-[#006aff]" : "text-zinc-400")} />
             {s.label}
           </button>
         );
@@ -214,12 +214,10 @@ function ProfileCard({ r, onSaved }: { r: any; onSaved: (fields: Record<string, 
     return (
       <Card title="Restaurant Profile">
         <div className="mb-5 flex items-center justify-between gap-3">
-          <p className="text-sm text-muted-foreground">The core information your concierge uses to answer guests.</p>
-          <div className="flex shrink-0 items-center gap-2">
-            <Button asChild size="sm" variant="ghost" className="rounded-full">
-              <a href="/onboarding?edit=1">Hours, allergens &amp; more</a>
-            </Button>
-            <Button size="sm" variant="outline" onClick={startEdit} className="rounded-full"><Pencil className="mr-1.5 h-3.5 w-3.5" /> Edit</Button>
+          <p className="text-sm text-zinc-500">The core information your concierge uses to answer guests.</p>
+          <div className="flex shrink-0 items-center gap-3">
+            <a href="/onboarding?edit=1" className="text-sm font-medium text-[#006aff] hover:underline">Hours, allergens &amp; more</a>
+            <Button size="sm" variant="outline" onClick={startEdit} className="rounded-full border-zinc-200 bg-white text-zinc-700 hover:bg-zinc-50"><Pencil className="mr-1.5 h-3.5 w-3.5" /> Edit</Button>
           </div>
         </div>
         <dl className="grid gap-x-8 gap-y-4 sm:grid-cols-2">
@@ -235,11 +233,11 @@ function ProfileCard({ r, onSaved }: { r: any; onSaved: (fields: Record<string, 
           <Detail label="Delivery & pickup" value={r.delivery_pickup} />
           <div className="sm:col-span-2"><Detail label="Allergy info" value={r.allergy_info} /></div>
           <div className="sm:col-span-2">
-            <dt className="text-xs uppercase tracking-wider text-muted-foreground">Dietary</dt>
+            <dt className="text-xs uppercase tracking-wider text-zinc-500">Dietary</dt>
             <dd className="mt-1.5 flex flex-wrap gap-1.5">
               {dietary.length ? dietary.map((l) => (
-                <span key={l} className="rounded-full bg-warm/60 px-2.5 py-0.5 text-xs font-medium">{l}</span>
-              )) : <span className="text-sm text-muted-foreground">—</span>}
+                <span key={l} className="rounded-full bg-zinc-50 px-2.5 py-0.5 text-xs font-medium">{l}</span>
+              )) : <span className="text-sm text-zinc-500">—</span>}
             </dd>
           </div>
         </dl>
@@ -250,7 +248,7 @@ function ProfileCard({ r, onSaved }: { r: any; onSaved: (fields: Record<string, 
   return (
     <Card title="Restaurant Profile">
       <div className="mb-5 flex items-center justify-between gap-3">
-        <p className="text-sm text-muted-foreground">Editing — changes apply to your concierge as soon as you save.</p>
+        <p className="text-sm text-zinc-500">Editing — changes apply to your concierge as soon as you save.</p>
         <div className="flex shrink-0 gap-2">
           <Button size="sm" onClick={save} disabled={saving} className="rounded-full">
             {saving ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <Save className="mr-1.5 h-3.5 w-3.5" />} Save
@@ -273,12 +271,12 @@ function ProfileCard({ r, onSaved }: { r: any; onSaved: (fields: Record<string, 
       </div>
 
       <div className="mt-5">
-        <span className="text-xs uppercase tracking-wider text-muted-foreground">Dietary options</span>
+        <span className="text-xs uppercase tracking-wider text-zinc-500">Dietary options</span>
         <div className="mt-2 flex flex-wrap gap-2">
           {DIETARY.map(([key, label]) => (
             <label key={key} className={cn(
               "flex cursor-pointer items-center gap-2 rounded-full border px-3 py-1.5 text-sm transition",
-              form[key] ? "border-foreground bg-warm/50" : "border-border hover:border-foreground/40",
+              form[key] ? "border-zinc-900 bg-zinc-50" : "border-zinc-200 hover:border-zinc-900/40",
             )}>
               <Checkbox checked={form[key]} onCheckedChange={(v) => set(key, !!v)} />
               {label}
@@ -293,8 +291,8 @@ function ProfileCard({ r, onSaved }: { r: any; onSaved: (fields: Record<string, 
 function Detail({ label, value }: { label: string; value: any }) {
   return (
     <div>
-      <dt className="text-xs uppercase tracking-wider text-muted-foreground">{label}</dt>
-      <dd className="mt-1.5 whitespace-pre-wrap break-words text-sm">{value || <span className="text-muted-foreground">—</span>}</dd>
+      <dt className="text-xs uppercase tracking-wider text-zinc-500">{label}</dt>
+      <dd className="mt-1.5 whitespace-pre-wrap break-words text-sm">{value || <span className="text-zinc-500">—</span>}</dd>
     </div>
   );
 }
@@ -352,7 +350,7 @@ function AppearanceCard({ r, onSaved }: { r: any; onSaved: (fields: Record<strin
 
   return (
     <Card title="Chatbot Appearance">
-      <p className="text-sm text-muted-foreground">Customize how your concierge looks, greets guests, and the action buttons it shows. The preview updates live.</p>
+      <p className="text-sm text-zinc-500">Customize how your concierge looks, greets guests, and the action buttons it shows. The preview updates live.</p>
       <div className="mt-5 grid gap-8 lg:grid-cols-[1fr_340px]">
         {/* Controls */}
         <div className="space-y-5">
@@ -369,7 +367,7 @@ function AppearanceCard({ r, onSaved }: { r: any; onSaved: (fields: Record<strin
                     onClick={() => set("brand_color", c)}
                     className={cn(
                       "h-8 w-8 rounded-full border-2 transition",
-                      form.brand_color.toLowerCase() === c.toLowerCase() ? "border-foreground scale-110" : "border-transparent hover:scale-105",
+                      form.brand_color.toLowerCase() === c.toLowerCase() ? "border-zinc-900 scale-110" : "border-transparent hover:scale-105",
                     )}
                     style={{ background: c }}
                     aria-label={`Use ${c}`}
@@ -377,9 +375,9 @@ function AppearanceCard({ r, onSaved }: { r: any; onSaved: (fields: Record<strin
                 ))}
               </div>
               <div className="flex items-center gap-3">
-                <input type="color" value={form.brand_color} onChange={(e) => set("brand_color", e.target.value)} className="h-10 w-14 cursor-pointer rounded-xl border border-border bg-transparent" />
+                <input type="color" value={form.brand_color} onChange={(e) => set("brand_color", e.target.value)} className="h-10 w-14 cursor-pointer rounded-xl border border-zinc-200 bg-transparent" />
                 <Input className={cn(inputCls, "max-w-[140px]")} value={form.brand_color} onChange={(e) => set("brand_color", e.target.value)} />
-                <Palette className="h-4 w-4 text-muted-foreground" />
+                <Palette className="h-4 w-4 text-zinc-500" />
               </div>
             </div>
           </Field>
@@ -387,18 +385,18 @@ function AppearanceCard({ r, onSaved }: { r: any; onSaved: (fields: Record<strin
           {/* Action buttons */}
           <div>
             <div className="flex items-center justify-between">
-              <span className="text-sm font-medium">Action buttons <span className="text-muted-foreground">(up to 3)</span></span>
+              <span className="text-sm font-medium">Action buttons <span className="text-zinc-500">(up to 3)</span></span>
               {actions.length < 3 && (
                 <Button size="sm" variant="ghost" onClick={addAction} className="rounded-full"><Plus className="mr-1 h-3.5 w-3.5" /> Add</Button>
               )}
             </div>
-            <p className="mt-1 text-xs text-muted-foreground">Each becomes a clickable picture-card in the chat that opens its link.</p>
+            <p className="mt-1 text-xs text-zinc-500">Each becomes a clickable picture-card in the chat that opens its link.</p>
             <div className="mt-3 space-y-3">
               {actions.map((a, i) => (
-                <div key={i} className="rounded-2xl border border-border p-3">
+                <div key={i} className="rounded-2xl border border-zinc-200 p-3">
                   <div className="flex items-start gap-3">
                     {/* Image / upload thumb */}
-                    <label className="group relative grid h-14 w-14 shrink-0 cursor-pointer place-items-center overflow-hidden rounded-xl border border-border bg-warm/30">
+                    <label className="group relative grid h-14 w-14 shrink-0 cursor-pointer place-items-center overflow-hidden rounded-xl border border-zinc-200 bg-zinc-50">
                       {a.image ? (
                         <img src={a.image} alt="" className="h-full w-full object-cover" />
                       ) : (
@@ -412,25 +410,25 @@ function AppearanceCard({ r, onSaved }: { r: any; onSaved: (fields: Record<strin
 
                     <div className="min-w-0 flex-1 space-y-2">
                       <Input className="h-9 rounded-lg" placeholder="Button name (e.g. Reserve a Table)" value={a.label} onChange={(e) => setAction(i, { label: e.target.value })} />
-                      <div className="flex items-center gap-1.5 rounded-lg border border-border px-2">
-                        <Link2 className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                      <div className="flex items-center gap-1.5 rounded-lg border border-zinc-200 px-2">
+                        <Link2 className="h-3.5 w-3.5 shrink-0 text-zinc-500" />
                         <input className="h-8 w-full bg-transparent text-sm outline-none" placeholder="https://link-to-open.com" value={a.url} onChange={(e) => setAction(i, { url: e.target.value })} />
                       </div>
                     </div>
 
-                    <button onClick={() => removeAction(i)} className="shrink-0 rounded-full p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground" aria-label="Remove button">
+                    <button onClick={() => removeAction(i)} className="shrink-0 rounded-full p-1.5 text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900" aria-label="Remove button">
                       <Trash2 className="h-4 w-4" />
                     </button>
                   </div>
                 </div>
               ))}
               {actions.length === 0 && (
-                <p className="rounded-xl border border-dashed border-border p-4 text-center text-sm text-muted-foreground">No buttons. Add up to 3.</p>
+                <p className="rounded-xl border border-dashed border-zinc-200 p-4 text-center text-sm text-zinc-500">No buttons. Add up to 3.</p>
               )}
             </div>
           </div>
 
-          <Button onClick={save} disabled={saving} className="rounded-full bg-gradient-hero shadow-glow">
+          <Button onClick={save} disabled={saving} className="rounded-full bg-zinc-900 text-white hover:bg-zinc-800">
             {saving ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <Save className="mr-1.5 h-3.5 w-3.5" />} Save appearance
           </Button>
         </div>
@@ -438,8 +436,8 @@ function AppearanceCard({ r, onSaved }: { r: any; onSaved: (fields: Record<strin
         {/* Live preview */}
         <div>
           <PreviewWidget r={{ ...r, ...form }} actions={actions} />
-          <div className="mt-3 flex items-center gap-2 text-xs text-muted-foreground">
-            <div className="h-1.5 w-1.5 animate-pulse rounded-full bg-success" /> Live preview
+          <div className="mt-3 flex items-center gap-2 text-xs text-zinc-500">
+            <div className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-500" /> Live preview
           </div>
         </div>
       </div>
@@ -494,13 +492,13 @@ function ConciergeTester({ r }: { r: any }) {
 
   return (
     <Card title="Test Your Concierge">
-      <p className="text-sm text-muted-foreground">
+      <p className="text-sm text-zinc-500">
         Chat with your live AI concierge — the exact experience your guests get. No widget install needed.
       </p>
 
-      <div className="mt-4 overflow-hidden rounded-[20px] border border-border bg-card shadow-elegant">
+      <div className="mt-4 overflow-hidden rounded-[20px] border border-zinc-200 bg-white shadow-elegant">
         {/* Header */}
-        <div className="flex items-center gap-3 border-b border-border px-5 py-4">
+        <div className="flex items-center gap-3 border-b border-zinc-200 px-5 py-4">
           <div className="relative">
             <div className="grid h-9 w-9 place-items-center rounded-full text-white" style={{ background: accent }}>
               <Sparkles className="h-3.5 w-3.5" strokeWidth={1.5} />
@@ -509,17 +507,17 @@ function ConciergeTester({ r }: { r: any }) {
           </div>
           <div className="flex-1 leading-tight">
             <div className="text-[13px] font-semibold tracking-tight">{name}</div>
-            <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+            <div className="flex items-center gap-1.5 text-[11px] text-zinc-500">
               <span>Online</span><span className="opacity-40">·</span><span>Live preview</span>
             </div>
           </div>
-          <button onClick={reset} className="rounded-full p-1.5 text-muted-foreground transition hover:bg-muted hover:text-foreground" aria-label="Reset chat" title="Reset">
+          <button onClick={reset} className="rounded-full p-1.5 text-zinc-500 transition hover:bg-zinc-100 hover:text-zinc-900" aria-label="Reset chat" title="Reset">
             <RotateCcw className="h-3.5 w-3.5" />
           </button>
         </div>
 
         {/* Messages */}
-        <div ref={scrollRef} className="h-[360px] overflow-y-auto bg-warm/10 px-5 py-5">
+        <div ref={scrollRef} className="h-[360px] overflow-y-auto bg-zinc-50 px-5 py-5">
           <div className="flex flex-col gap-3">
             {messages.map((m, i) =>
               m.role === "user" ? (
@@ -531,7 +529,7 @@ function ConciergeTester({ r }: { r: any }) {
               ) : (
                 <div key={i} className="flex items-end gap-2">
                   <div className="grid h-7 w-7 shrink-0 place-items-center rounded-full text-[10px] font-semibold text-white" style={{ background: accent }}>{initial}</div>
-                  <div className="max-w-[85%] whitespace-pre-wrap rounded-2xl rounded-bl-md border border-border bg-card px-3.5 py-2.5 text-sm leading-relaxed shadow-sm">
+                  <div className="max-w-[85%] whitespace-pre-wrap rounded-2xl rounded-bl-md border border-zinc-200 bg-white px-3.5 py-2.5 text-sm leading-relaxed shadow-sm">
                     {m.content}
                   </div>
                 </div>
@@ -540,11 +538,11 @@ function ConciergeTester({ r }: { r: any }) {
             {busy && (
               <div className="flex items-end gap-2">
                 <div className="grid h-7 w-7 shrink-0 place-items-center rounded-full text-[10px] font-semibold text-white" style={{ background: accent }}>{initial}</div>
-                <div className="rounded-2xl rounded-bl-md border border-border bg-card px-3.5 py-3 shadow-sm">
+                <div className="rounded-2xl rounded-bl-md border border-zinc-200 bg-white px-3.5 py-3 shadow-sm">
                   <span className="flex items-center gap-1">
-                    <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-muted-foreground/50 [animation-delay:-0.3s]" />
-                    <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-muted-foreground/50 [animation-delay:-0.15s]" />
-                    <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-muted-foreground/50" />
+                    <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-zinc-100-foreground/50 [animation-delay:-0.3s]" />
+                    <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-zinc-100-foreground/50 [animation-delay:-0.15s]" />
+                    <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-zinc-100-foreground/50" />
                   </span>
                 </div>
               </div>
@@ -554,9 +552,9 @@ function ConciergeTester({ r }: { r: any }) {
 
         {/* Suggestions */}
         {messages.length <= 1 && !busy && suggestions.length > 0 && (
-          <div className="flex flex-wrap gap-1.5 border-t border-border bg-card px-5 pt-3">
+          <div className="flex flex-wrap gap-1.5 border-t border-zinc-200 bg-white px-5 pt-3">
             {suggestions.map((s) => (
-              <button key={s} onClick={() => ask(s)} className="rounded-full border border-border bg-card px-3 py-1.5 text-xs font-medium text-foreground transition hover:bg-foreground hover:text-background">
+              <button key={s} onClick={() => ask(s)} className="rounded-full border border-zinc-200 bg-white px-3 py-1.5 text-xs font-medium text-zinc-900 transition hover:bg-zinc-900 hover:text-white">
                 {s}
               </button>
             ))}
@@ -564,13 +562,13 @@ function ConciergeTester({ r }: { r: any }) {
         )}
 
         {/* Composer */}
-        <form onSubmit={(e) => { e.preventDefault(); ask(); }} className="flex items-center gap-2 border-t border-border bg-card px-3 py-3">
+        <form onSubmit={(e) => { e.preventDefault(); ask(); }} className="flex items-center gap-2 border-t border-zinc-200 bg-white px-3 py-3">
           <input
             value={input}
             onChange={(e) => setInput(e.target.value)}
             placeholder="Ask about reservations, menu, hours…"
             disabled={busy}
-            className="flex-1 rounded-full border border-border bg-warm/20 px-4 py-2.5 text-sm outline-none transition placeholder:text-muted-foreground focus:bg-background"
+            className="flex-1 rounded-full border border-zinc-200 bg-zinc-50 px-4 py-2.5 text-sm outline-none transition placeholder:text-zinc-500 focus:bg-white"
           />
           <button
             type="submit"
@@ -645,19 +643,19 @@ function MenuCard({ r, onUpdated }: { r: any; onUpdated: (path: string) => void 
 
   return (
     <Card title="Menu PDF">
-      <p className="text-sm text-muted-foreground">
+      <p className="text-sm text-zinc-500">
         Upload your menu and your concierge will read it — guests can ask about dishes, prices, and ingredients.
       </p>
-      <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-warm/20 p-4">
+      <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-zinc-200 bg-zinc-50 p-4">
         <div className="flex min-w-0 items-center gap-3">
-          <FileText className="h-5 w-5 shrink-0 text-primary" />
+          <FileText className="h-5 w-5 shrink-0 text-zinc-700" />
           <span className="truncate text-sm">
-            {r.menu_pdf_path ? r.menu_pdf_path.split("/").pop() : <span className="text-muted-foreground">No menu uploaded</span>}
+            {r.menu_pdf_path ? r.menu_pdf_path.split("/").pop() : <span className="text-zinc-500">No menu uploaded</span>}
           </span>
         </div>
         <div className="flex items-center gap-2">
           <label className={cn(
-            "inline-flex cursor-pointer items-center rounded-full border border-border bg-background px-3 py-1.5 text-xs font-medium hover:bg-warm/40",
+            "inline-flex cursor-pointer items-center rounded-full border border-zinc-200 bg-white px-3 py-1.5 text-xs font-medium hover:bg-zinc-50",
             busy && "pointer-events-none opacity-60",
           )}>
             {busy ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <Upload className="mr-1.5 h-3.5 w-3.5" />}
@@ -665,7 +663,7 @@ function MenuCard({ r, onUpdated }: { r: any; onUpdated: (path: string) => void 
             <input type="file" accept="application/pdf" className="hidden" onChange={replace} disabled={busy} />
           </label>
           {r.menu_pdf_path && !busy && (
-            <button onClick={remove} className="rounded-full p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground" aria-label="Remove menu">
+            <button onClick={remove} className="rounded-full p-1.5 text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900" aria-label="Remove menu">
               <Trash2 className="h-4 w-4" />
             </button>
           )}
@@ -673,11 +671,11 @@ function MenuCard({ r, onUpdated }: { r: any; onUpdated: (path: string) => void 
       </div>
       {r.menu_pdf_path && chunks !== null && (
         chunks > 0 ? (
-          <p className="mt-2 flex items-center gap-1.5 text-xs text-success">
+          <p className="mt-2 flex items-center gap-1.5 text-xs text-emerald-600">
             <Sparkle className="h-3 w-3" /> Indexed for AI ({chunks} sections) — your concierge reads this menu.
           </p>
         ) : (
-          <p className="mt-2 flex items-center gap-1.5 text-xs text-accent">
+          <p className="mt-2 flex items-center gap-1.5 text-xs text-[#006aff]">
             <AlertCircle className="h-3 w-3" /> Uploaded but not indexed yet. Click <strong>Replace</strong> and re-select your menu PDF to let the AI read it.
           </p>
         )
@@ -739,13 +737,13 @@ function QASection({ restaurantId }: { restaurantId: string }) {
 
   return (
     <Card title="Custom Q&A">
-      <p className="text-sm text-muted-foreground">
+      <p className="text-sm text-zinc-500">
         Write your own questions and answers. Your concierge will prefer these when guests ask something similar.
       </p>
 
-      <div className="mt-5 space-y-3 rounded-2xl border border-border bg-warm/20 p-4">
-        <Input placeholder="Question (e.g. Do you take walk-ins?)" value={q} onChange={(e) => setQ(e.target.value)} className="h-10 rounded-xl bg-background" />
-        <Textarea placeholder="Answer" value={a} onChange={(e) => setA(e.target.value)} className="min-h-[72px] rounded-xl bg-background" />
+      <div className="mt-5 space-y-3 rounded-2xl border border-zinc-200 bg-zinc-50 p-4">
+        <Input placeholder="Question (e.g. Do you take walk-ins?)" value={q} onChange={(e) => setQ(e.target.value)} className="h-10 rounded-xl bg-white" />
+        <Textarea placeholder="Answer" value={a} onChange={(e) => setA(e.target.value)} className="min-h-[72px] rounded-xl bg-white" />
         <Button onClick={add} disabled={saving} className="rounded-full">
           {saving ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <Plus className="mr-1.5 h-3.5 w-3.5" />}
           Add Q&A
@@ -754,15 +752,15 @@ function QASection({ restaurantId }: { restaurantId: string }) {
 
       <div className="mt-5 space-y-3">
         {loading ? (
-          <div className="flex justify-center py-6"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
+          <div className="flex justify-center py-6"><Loader2 className="h-5 w-5 animate-spin text-zinc-500" /></div>
         ) : items.length === 0 ? (
-          <div className="flex flex-col items-center gap-2 py-8 text-center text-sm text-muted-foreground">
+          <div className="flex flex-col items-center gap-2 py-8 text-center text-sm text-zinc-500">
             <HelpCircle className="h-6 w-6" />
             No custom Q&A yet. Add your first one above.
           </div>
         ) : (
           items.map((item) => (
-            <div key={item.id} className="rounded-2xl border border-border p-4">
+            <div key={item.id} className="rounded-2xl border border-zinc-200 p-4">
               {editingId === item.id ? (
                 <div className="space-y-3">
                   <Input value={editQ} onChange={(e) => setEditQ(e.target.value)} className="h-10 rounded-xl" />
@@ -776,11 +774,11 @@ function QASection({ restaurantId }: { restaurantId: string }) {
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
                     <p className="text-sm font-medium">{item.question}</p>
-                    <p className="mt-1 whitespace-pre-wrap text-sm text-muted-foreground">{item.answer}</p>
+                    <p className="mt-1 whitespace-pre-wrap text-sm text-zinc-500">{item.answer}</p>
                   </div>
                   <div className="flex shrink-0 gap-1">
-                    <button onClick={() => startEdit(item)} className="rounded-full p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground" aria-label="Edit"><Pencil className="h-3.5 w-3.5" /></button>
-                    <button onClick={() => remove(item.id)} className="rounded-full p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground" aria-label="Delete"><Trash2 className="h-3.5 w-3.5" /></button>
+                    <button onClick={() => startEdit(item)} className="rounded-full p-1.5 text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900" aria-label="Edit"><Pencil className="h-3.5 w-3.5" /></button>
+                    <button onClick={() => remove(item.id)} className="rounded-full p-1.5 text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900" aria-label="Delete"><Trash2 className="h-3.5 w-3.5" /></button>
                   </div>
                 </div>
               )}
@@ -872,16 +870,16 @@ function HistorySection({ restaurantId }: { restaurantId: string }) {
   return (
     <Card title="Guest Questions">
       <div className="flex items-center justify-between">
-        <p className="text-sm text-muted-foreground">
-          What guests ask your concierge — synced live. {logs.length > 0 && <span className="text-foreground">{logs.length} total</span>}
+        <p className="text-sm text-zinc-500">
+          What guests ask your concierge — synced live. {logs.length > 0 && <span className="text-zinc-900">{logs.length} total</span>}
         </p>
         <Button variant="ghost" size="sm" onClick={load} className="rounded-full"><RefreshCw className="mr-1.5 h-3.5 w-3.5" /> Refresh</Button>
       </div>
 
       {loading ? (
-        <div className="flex justify-center py-10"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
+        <div className="flex justify-center py-10"><Loader2 className="h-5 w-5 animate-spin text-zinc-500" /></div>
       ) : logs.length === 0 ? (
-        <div className="flex flex-col items-center gap-2 py-10 text-center text-sm text-muted-foreground">
+        <div className="flex flex-col items-center gap-2 py-10 text-center text-sm text-zinc-500">
           <MessageSquare className="h-6 w-6" />
           No guest questions yet. They'll appear here live once people start chatting with your concierge.
         </div>
@@ -895,24 +893,24 @@ function HistorySection({ restaurantId }: { restaurantId: string }) {
 
           <TabsContent value="recent" className="mt-4 space-y-3">
             {logs.map((log) => (
-              <div key={log.id} className="rounded-2xl border border-border p-4">
+              <div key={log.id} className="rounded-2xl border border-zinc-200 p-4">
                 <div className="flex items-start justify-between gap-3">
                   <p className="text-sm font-medium">{log.question}</p>
-                  <button onClick={() => remove(log.id)} className="shrink-0 rounded-full p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground" aria-label="Delete"><Trash2 className="h-3.5 w-3.5" /></button>
+                  <button onClick={() => remove(log.id)} className="shrink-0 rounded-full p-1.5 text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900" aria-label="Delete"><Trash2 className="h-3.5 w-3.5" /></button>
                 </div>
-                {log.answer && <p className="mt-1.5 whitespace-pre-wrap text-sm text-muted-foreground">{log.answer}</p>}
-                <p className="mt-2 text-xs text-muted-foreground/70">{new Date(log.created_at).toLocaleString()}</p>
+                {log.answer && <p className="mt-1.5 whitespace-pre-wrap text-sm text-zinc-500">{log.answer}</p>}
+                <p className="mt-2 text-xs text-zinc-400">{new Date(log.created_at).toLocaleString()}</p>
               </div>
             ))}
           </TabsContent>
 
           <TabsContent value="frequent" className="mt-4 space-y-2">
             {frequent.map((f, i) => (
-              <div key={i} className="flex items-center justify-between gap-3 rounded-xl border border-border p-3">
+              <div key={i} className="flex items-center justify-between gap-3 rounded-xl border border-zinc-200 p-3">
                 <p className="min-w-0 text-sm">{f.question}</p>
                 <span className={cn(
                   "shrink-0 rounded-full px-2.5 py-0.5 text-xs font-semibold",
-                  f.count > 1 ? "bg-accent/15 text-accent" : "bg-muted text-muted-foreground",
+                  f.count > 1 ? "bg-[#e8f1ff] text-[#006aff]" : "bg-zinc-100 text-zinc-500",
                 )}>
                   {f.count}× {f.count > 1 ? "asked" : ""}
                 </span>
@@ -922,12 +920,12 @@ function HistorySection({ restaurantId }: { restaurantId: string }) {
 
           <TabsContent value="topics" className="mt-4">
             {topics.length === 0 ? (
-              <p className="py-6 text-center text-sm text-muted-foreground">Not enough questions yet to spot recurring topics.</p>
+              <p className="py-6 text-center text-sm text-zinc-500">Not enough questions yet to spot recurring topics.</p>
             ) : (
               <div className="flex flex-wrap gap-2">
                 {topics.map(([word, n]) => (
-                  <span key={word} className="inline-flex items-center gap-1.5 rounded-full border border-border bg-warm/30 px-3 py-1.5 text-sm">
-                    {word} <span className="rounded-full bg-accent/15 px-1.5 text-xs font-semibold text-accent">{n}</span>
+                  <span key={word} className="inline-flex items-center gap-1.5 rounded-full border border-zinc-200 bg-zinc-50 px-3 py-1.5 text-sm">
+                    {word} <span className="rounded-full bg-[#e8f1ff] px-1.5 text-xs font-semibold text-[#006aff]">{n}</span>
                   </span>
                 ))}
               </div>
@@ -948,15 +946,15 @@ function WidgetInstallCard({ r }: { r: any }) {
 
   return (
     <Card title="Widget Installation">
-      <p className="text-sm text-muted-foreground">
-        Paste this snippet into your site's <code className="rounded bg-muted px-1.5 py-0.5 text-xs">&lt;/body&gt;</code> tag.
+      <p className="text-sm text-zinc-500">
+        Paste this snippet into your site's <code className="rounded bg-zinc-100 px-1.5 py-0.5 text-xs">&lt;/body&gt;</code> tag.
       </p>
       <div className="mt-4 grid gap-3 sm:grid-cols-2">
         <PlatformGuide name="Wix" steps={["Settings → Custom Code (NOT HTML Embed — embeds run in an isolated iframe)", "Add Custom Code → All Pages → Body - end", "Paste snippet and save"]} />
         <PlatformGuide name="Squarespace" steps={["Settings → Advanced → Code Injection", "Paste snippet in Footer", "Save"]} />
       </div>
-      <div className="mt-5 overflow-hidden rounded-xl border border-border bg-foreground p-4">
-        <pre className="overflow-x-auto text-xs leading-relaxed text-background/90">{widgetSnippet}</pre>
+      <div className="mt-5 overflow-hidden rounded-xl border border-zinc-200 bg-zinc-900 p-4">
+        <pre className="overflow-x-auto text-xs leading-relaxed text-zinc-100">{widgetSnippet}</pre>
       </div>
       <Button onClick={copy} variant="outline" className="mt-4 rounded-full">
         <Copy className="mr-1.5 h-3.5 w-3.5" /> Copy snippet
@@ -972,7 +970,7 @@ const inputCls = "h-10 rounded-xl";
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="space-y-1.5">
-      <label className="text-xs uppercase tracking-wider text-muted-foreground">{label}</label>
+      <label className="text-xs uppercase tracking-wider text-zinc-500">{label}</label>
       {children}
     </div>
   );
@@ -980,12 +978,12 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 
 function StatusCard({ title, status, label, icon, detail }: { title: string; status: "ready" | "missing"; label: string; icon: React.ReactNode; detail: string }) {
   return (
-    <div className="min-w-0 rounded-2xl border border-border bg-gradient-card p-6 shadow-sm">
+    <div className="min-w-0 rounded-2xl border border-zinc-200 bg-gradient-card p-6 shadow-sm">
       <div className="flex items-center justify-between gap-2">
-        <div className="flex min-w-0 items-center gap-2 text-sm font-medium text-muted-foreground">{icon}{title}</div>
+        <div className="flex min-w-0 items-center gap-2 text-sm font-medium text-zinc-500">{icon}{title}</div>
         <span className={cn(
           "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium",
-          status === "ready" ? "bg-success/10 text-success" : "bg-accent/15 text-accent",
+          status === "ready" ? "bg-emerald-50 text-emerald-600" : "bg-[#e8f1ff] text-[#006aff]",
         )}>
           {status === "ready" ? <Check className="h-3 w-3" /> : <AlertCircle className="h-3 w-3" />}
           {label}
@@ -1007,9 +1005,9 @@ function Card({ title, children }: { title: string; children: React.ReactNode })
 
 function PlatformGuide({ name, steps }: { name: string; steps: string[] }) {
   return (
-    <div className="rounded-xl border border-border bg-background p-4">
+    <div className="rounded-xl border border-zinc-200 bg-white p-4">
       <div className="text-sm font-semibold">{name}</div>
-      <ol className="mt-2 space-y-1 text-xs text-muted-foreground">
+      <ol className="mt-2 space-y-1 text-xs text-zinc-500">
         {steps.map((s, i) => <li key={i}>{i + 1}. {s}</li>)}
       </ol>
     </div>
@@ -1028,7 +1026,7 @@ function PreviewWidget({ r, actions }: { r: any; actions?: ActionBtn[] }) {
   ).filter((b) => b && (b.label || b.image)).slice(0, 3);
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-border shadow-md">
+    <div className="overflow-hidden rounded-2xl border border-zinc-200 shadow-md">
       <div style={{ background: color }} className="flex items-center gap-3 p-4 text-white">
         <div className="grid h-9 w-9 place-items-center rounded-full bg-white/20"><Sparkles className="h-4 w-4" /></div>
         <div>
@@ -1036,14 +1034,14 @@ function PreviewWidget({ r, actions }: { r: any; actions?: ActionBtn[] }) {
           <div className="text-xs opacity-80">Online</div>
         </div>
       </div>
-      <div className="space-y-3 bg-background p-4">
-        <div className="max-w-[85%] rounded-2xl rounded-tl-sm bg-muted p-3 text-sm">
+      <div className="space-y-3 bg-white p-4">
+        <div className="max-w-[85%] rounded-2xl rounded-tl-sm bg-zinc-100 p-3 text-sm">
           {r.welcome_message || "Hello!"}
         </div>
         {list.length > 0 && (
           <div className="grid grid-cols-3 gap-2 pt-1">
             {list.map((b, i) => (
-              <div key={i} className="overflow-hidden rounded-xl border border-border">
+              <div key={i} className="overflow-hidden rounded-xl border border-zinc-200">
                 <div
                   className="grid h-11 place-items-center bg-cover bg-center text-white"
                   style={b.image ? { backgroundImage: `url(${b.image})` } : { background: `linear-gradient(135deg, ${color}, rgba(0,0,0,.3))` }}
