@@ -53,71 +53,56 @@ function Dashboard() {
   const signOut = async () => { await supabase.auth.signOut(); navigate({ to: "/" }); };
   const patch = (fields: Record<string, any>) => setR((cur) => ({ ...(cur || {}), ...fields }));
 
-  const menuStatus = r.menu_pdf_path ? "ready" : "missing";
-
   return (
-    <div className="min-h-screen bg-background">
-      <header className="border-b border-border bg-background/90 px-6 py-4 backdrop-blur sm:px-10">
+    <div className="min-h-screen bg-white text-zinc-900">
+      <header className="sticky top-0 z-40 border-b border-zinc-200 bg-white/90 px-6 py-4 backdrop-blur sm:px-10">
         <div className="mx-auto flex max-w-6xl items-center justify-between">
           <Link to="/dashboard" className="flex items-center gap-2">
-            <div className="grid h-8 w-8 place-items-center rounded-lg bg-gradient-hero text-primary-foreground">
+            <div className="grid h-8 w-8 place-items-center rounded-lg bg-zinc-900 text-white">
               <Utensils className="h-3.5 w-3.5" />
             </div>
-            <span className="text-sm font-semibold">Maitre</span>
+            <span className="text-base font-semibold tracking-tight">Maitre</span>
           </Link>
-          <Button variant="ghost" size="sm" onClick={signOut} className="rounded-full">
-            <LogOut className="mr-1.5 h-3.5 w-3.5" /> Sign out
-          </Button>
+          <button onClick={signOut} className="flex items-center gap-1.5 text-sm font-medium text-zinc-500 transition hover:text-zinc-900">
+            <LogOut className="h-4 w-4" /> Sign out
+          </button>
         </div>
       </header>
 
-      <div className="mx-auto max-w-6xl px-6 py-10 sm:px-10 sm:py-12">
-        <div>
-          <p className="text-xs font-medium uppercase tracking-wider text-accent">Dashboard</p>
-          <h1 className="mt-2 text-3xl font-semibold tracking-tight sm:text-4xl">{r.name || "Your restaurant"}</h1>
-          <p className="mt-1 text-muted-foreground">{r.cuisine_type || "Welcome back"}</p>
-        </div>
-
-        <div className="mt-8 grid gap-4 sm:grid-cols-3">
-          <StatusCard title="AI Concierge" status="ready" label="Live" icon={<Sparkles className="h-4 w-4" />} detail={r.concierge_name || "Maître AI"} />
-          <StatusCard
-            title="Menu Upload"
-            status={menuStatus as any}
-            label={menuStatus === "ready" ? "Uploaded" : "Pending"}
-            icon={<FileText className="h-4 w-4" />}
-            detail={r.menu_pdf_path ? r.menu_pdf_path.split("/").pop() : "No menu uploaded"}
-          />
-          <StatusCard title="Widget" status="ready" label="Ready to install" icon={<Check className="h-4 w-4" />} detail="Copy snippet below" />
+      <div className="mx-auto max-w-6xl px-6 py-12 sm:px-10">
+        <div className="mb-10">
+          <h1 className="text-4xl font-semibold tracking-tight sm:text-5xl">{r.name || "Your restaurant"}</h1>
+          <p className="mt-2 text-lg text-zinc-500">{r.cuisine_type || "Welcome back"}</p>
         </div>
 
         {/* Sticky section nav + content */}
-        <div className="mt-10 gap-10 lg:grid lg:grid-cols-[210px_minmax(0,1fr)]">
+        <div className="gap-12 lg:grid lg:grid-cols-[220px_minmax(0,1fr)]">
           <aside className="hidden lg:block">
-            <div className="sticky top-8">
+            <div className="sticky top-24">
               <SideNav />
             </div>
           </aside>
 
           <div className="min-w-0 space-y-8">
-            <section id="profile" className="scroll-mt-8 space-y-6">
+            <section id="profile" className="scroll-mt-24 space-y-6">
               <ProfileCard r={r} onSaved={patch} />
             </section>
 
-            <section id="concierge" className="scroll-mt-8 space-y-6">
+            <section id="concierge" className="scroll-mt-24 space-y-6">
               <AppearanceCard r={r} onSaved={patch} />
               <ConciergeTester r={r} />
             </section>
 
-            <section id="menu" className="scroll-mt-8 space-y-6">
+            <section id="menu" className="scroll-mt-24 space-y-6">
               <MenuCard r={r} onUpdated={(path) => patch({ menu_pdf_path: path })} />
               <QASection restaurantId={r.id} />
             </section>
 
-            <section id="history" className="scroll-mt-8">
+            <section id="history" className="scroll-mt-24">
               <HistorySection restaurantId={r.id} />
             </section>
 
-            <section id="install" className="scroll-mt-8">
+            <section id="install" className="scroll-mt-24">
               <WidgetInstallCard r={r} />
             </section>
           </div>
@@ -141,27 +126,33 @@ function SideNav() {
   const [active, setActive] = useState<string>(SECTIONS[0].id);
 
   useEffect(() => {
-    const observer = new IntersectionObserver(
-      (entries) => {
-        const visible = entries
-          .filter((e) => e.isIntersecting)
-          .sort((a, b) => b.intersectionRatio - a.intersectionRatio);
-        if (visible[0]) setActive(visible[0].target.id);
-      },
-      { rootMargin: "-25% 0px -60% 0px", threshold: [0, 0.2, 0.5, 1] },
-    );
-    SECTIONS.forEach((s) => {
-      const el = document.getElementById(s.id);
-      if (el) observer.observe(el);
-    });
-    return () => observer.disconnect();
+    const onScroll = () => {
+      const offset = 150;
+      let current = SECTIONS[0].id;
+      for (const s of SECTIONS) {
+        const el = document.getElementById(s.id);
+        if (el && el.getBoundingClientRect().top <= offset) current = s.id;
+      }
+      // When scrolled to the very bottom, force the last section active.
+      const doc = document.documentElement;
+      if (window.innerHeight + window.scrollY >= doc.scrollHeight - 4) {
+        current = SECTIONS[SECTIONS.length - 1].id;
+      }
+      setActive(current);
+    };
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("resize", onScroll);
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("resize", onScroll);
+    };
   }, []);
 
   const go = (id: string) => document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
 
   return (
-    <nav className="space-y-1">
-      <p className="px-3 pb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Manage</p>
+    <nav className="space-y-0.5">
       {SECTIONS.map((s) => {
         const on = active === s.id;
         return (
@@ -169,11 +160,11 @@ function SideNav() {
             key={s.id}
             onClick={() => go(s.id)}
             className={cn(
-              "flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-sm font-medium transition",
-              on ? "bg-foreground text-background shadow-sm" : "text-muted-foreground hover:bg-muted hover:text-foreground",
+              "flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-[15px] transition",
+              on ? "bg-zinc-100 font-semibold text-zinc-900" : "font-medium text-zinc-500 hover:bg-zinc-50 hover:text-zinc-900",
             )}
           >
-            <s.icon className="h-4 w-4 shrink-0" />
+            <s.icon className={cn("h-4 w-4 shrink-0", on ? "text-zinc-900" : "text-zinc-400")} />
             {s.label}
           </button>
         );
@@ -1007,8 +998,8 @@ function StatusCard({ title, status, label, icon, detail }: { title: string; sta
 
 function Card({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="rounded-3xl border border-border bg-card p-6 shadow-sm sm:p-8">
-      <h2 className="mb-5 text-lg font-semibold tracking-tight">{title}</h2>
+    <div className="rounded-xl border border-zinc-200 bg-white p-6 sm:p-8">
+      <h2 className="mb-6 text-xl font-semibold tracking-tight text-zinc-900">{title}</h2>
       {children}
     </div>
   );
