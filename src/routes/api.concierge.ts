@@ -210,6 +210,23 @@ export const Route = createFileRoute("/api/concierge")({
           return json({ error: "Unknown restaurant" }, 404);
         }
 
+        // Usage gate: free plans get a limited number of demo messages.
+        // When the allowance is spent, respond gracefully WITHOUT calling
+        // OpenAI or logging (which would burn more usage).
+        const { data: usageData } = await supabase.rpc("get_usage", {
+          p_restaurant_id: restaurantId,
+        });
+        const usage = (usageData as { allowed?: boolean; plan?: string; used?: number; limit?: number } | null) ?? null;
+        if (usage && usage.allowed === false) {
+          return json({
+            answer:
+              `Thanks so much for stopping by! ${ctx.name}'s AI concierge has reached its demo ` +
+              `limit for now. Please reach out to the restaurant directly and they'll be ` +
+              `delighted to help. ✨`,
+            limited: true,
+          });
+        }
+
         const apiKey = process.env.OPENAI_API_KEY;
         const model = process.env.OPENAI_MODEL || "gpt-4.1-mini";
 

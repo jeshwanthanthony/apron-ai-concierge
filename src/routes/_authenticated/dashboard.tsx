@@ -11,7 +11,7 @@ import {
   Utensils, FileText, Check, Sparkles, Copy, Pencil, LogOut, Loader2, AlertCircle,
   Plus, Trash2, Save, X, MessageSquare, RefreshCw, Upload, HelpCircle, Sparkle,
   Palette, Clock, TrendingUp, Hash, Send, RotateCcw, Store, Code2,
-  Image as ImageIcon, ArrowUpRight, Link2,
+  Image as ImageIcon, ArrowUpRight, Link2, Zap, CreditCard, Crown,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -53,6 +53,16 @@ function Dashboard() {
   const signOut = async () => { await supabase.auth.signOut(); navigate({ to: "/" }); };
   const patch = (fields: Record<string, any>) => setR((cur) => ({ ...(cur || {}), ...fields }));
 
+  // Keep the usage meter live as the owner tests their own concierge.
+  const registerUsage = (limited: boolean) => setR((cur) => {
+    if (!cur) return cur;
+    const limit = Number(cur.free_message_limit ?? 2);
+    const used = limited
+      ? Math.max(Number(cur.messages_used ?? 0), limit)
+      : Number(cur.messages_used ?? 0) + 1;
+    return { ...cur, messages_used: used };
+  });
+
   return (
     <div className="min-h-screen bg-white text-zinc-900">
       <header className="sticky top-0 z-40 border-b border-zinc-200 bg-white/90 px-6 py-4 backdrop-blur sm:px-10">
@@ -90,7 +100,7 @@ function Dashboard() {
 
             <section id="concierge" className="scroll-mt-24 space-y-6">
               <AppearanceCard r={r} onSaved={patch} />
-              <ConciergeTester r={r} />
+              <ConciergeTester r={r} onUsage={registerUsage} />
             </section>
 
             <section id="menu" className="scroll-mt-24 space-y-6">
@@ -100,6 +110,10 @@ function Dashboard() {
 
             <section id="history" className="scroll-mt-24">
               <HistorySection restaurantId={r.id} />
+            </section>
+
+            <section id="usage" className="scroll-mt-24">
+              <PlanUsageCard r={r} onSaved={patch} />
             </section>
 
             <section id="install" className="scroll-mt-24">
@@ -119,6 +133,7 @@ const SECTIONS = [
   { id: "concierge", label: "Chatbot & Preview", icon: Sparkles },
   { id: "menu", label: "Menu & Q&A", icon: FileText },
   { id: "history", label: "Guest Questions", icon: MessageSquare },
+  { id: "usage", label: "Plan & Usage", icon: Zap },
   { id: "install", label: "Install Widget", icon: Code2 },
 ] as const;
 
@@ -449,7 +464,7 @@ function AppearanceCard({ r, onSaved }: { r: any; onSaved: (fields: Record<strin
 
 type Msg = { role: "user" | "assistant"; content: string };
 
-function ConciergeTester({ r }: { r: any }) {
+function ConciergeTester({ r, onUsage }: { r: any; onUsage?: (limited: boolean) => void }) {
   const accent = r.brand_color || "#7c3aed";
   const name = r.concierge_name || "Maître AI";
   const welcome = r.welcome_message || "Hi there! 👋 How can I help you today?";
@@ -458,6 +473,7 @@ function ConciergeTester({ r }: { r: any }) {
   const [messages, setMessages] = useState<Msg[]>([{ role: "assistant", content: welcome }]);
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
+  const [limited, setLimited] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -480,6 +496,11 @@ function ConciergeTester({ r }: { r: any }) {
       const data = await res.json().catch(() => ({}));
       const reply = res.ok && data.answer ? data.answer : data.error || "Something went wrong.";
       setMessages((m) => [...m, { role: "assistant", content: reply }]);
+      if (res.ok) {
+        const isLimited = !!data.limited;
+        setLimited(isLimited);
+        onUsage?.(isLimited);
+      }
     } catch {
       setMessages((m) => [...m, { role: "assistant", content: "Couldn't reach the concierge. Is the dev server running?" }]);
     } finally {
@@ -487,7 +508,8 @@ function ConciergeTester({ r }: { r: any }) {
     }
   };
 
-  const reset = () => setMessages([{ role: "assistant", content: welcome }]);
+  const reset = () => { setMessages([{ role: "assistant", content: welcome }]); setLimited(false); };
+  const goToUsage = () => document.getElementById("usage")?.scrollIntoView({ behavior: "smooth", block: "start" });
   const initial = (name.charAt(0) || "C").toUpperCase();
 
   return (
@@ -558,6 +580,19 @@ function ConciergeTester({ r }: { r: any }) {
                 {s}
               </button>
             ))}
+          </div>
+        )}
+
+        {/* Upgrade nudge when the trial is used up */}
+        {limited && (
+          <div className="flex items-center justify-between gap-3 border-t border-amber-100 bg-amber-50 px-5 py-3">
+            <div className="flex items-center gap-2 text-sm text-amber-800">
+              <Zap className="h-4 w-4 shrink-0" />
+              <span>You've hit the free trial limit. Upgrade to keep answering guests.</span>
+            </div>
+            <button onClick={goToUsage} className="shrink-0 rounded-full bg-zinc-900 px-3 py-1.5 text-xs font-semibold text-white hover:bg-zinc-800">
+              View plans
+            </button>
           </div>
         )}
 
@@ -934,6 +969,218 @@ function HistorySection({ restaurantId }: { restaurantId: string }) {
         </Tabs>
       )}
     </Card>
+  );
+}
+
+/* ------------------------------ Plan & usage ------------------------------- */
+
+type PlanId = "free" | "pro_monthly" | "pro_annual";
+
+const PLAN_META: Record<PlanId, { name: string; badge: string }> = {
+  free: { name: "Free Trial", badge: "bg-zinc-100 text-zinc-600" },
+  pro_monthly: { name: "Pro · Monthly", badge: "bg-[#e8f1ff] text-[#006aff]" },
+  pro_annual: { name: "Pro · Annual", badge: "bg-emerald-50 text-emerald-600" },
+};
+
+// Pro plans include a generous monthly message allowance (effectively
+// unlimited for a typical independent restaurant).
+const PRO_INCLUDED = 1500;
+
+function PlanUsageCard({ r, onSaved }: { r: any; onSaved: (fields: Record<string, any>) => void }) {
+  const plan: PlanId = (["free", "pro_monthly", "pro_annual"].includes(r.plan) ? r.plan : "free") as PlanId;
+  const used = Number(r.messages_used ?? 0);
+  const freeLimit = Number(r.free_message_limit ?? 2);
+  const isFree = plan === "free";
+  const limit = isFree ? freeLimit : PRO_INCLUDED;
+  const pct = Math.min(100, Math.round((used / Math.max(1, limit)) * 100));
+  const remaining = Math.max(0, limit - used);
+  const out = isFree && used >= freeLimit;
+
+  const [showUpgrade, setShowUpgrade] = useState(false);
+  const [busy, setBusy] = useState(false);
+
+  const meterColor = out ? "#dc2626" : pct > 75 ? "#ea580c" : isFree ? "#006aff" : "#16a34a";
+
+  const subscribe = async (target: PlanId) => {
+    setBusy(true);
+    const { data, error } = await supabase.rpc("set_plan", { p_restaurant_id: r.id, p_plan: target });
+    setBusy(false);
+    if (error) { toast.error(error.message); return; }
+    onSaved({ plan: target });
+    setShowUpgrade(false);
+    toast.success(`You're on ${PLAN_META[target].name} 🎉 (demo — no real charge)`);
+    void data;
+  };
+
+  const resetDemo = async () => {
+    setBusy(true);
+    const { error } = await supabase.rpc("reset_demo_usage", { p_restaurant_id: r.id });
+    setBusy(false);
+    if (error) { toast.error(error.message); return; }
+    onSaved({ plan: "free", messages_used: 0 });
+    toast.success("Demo usage reset — you're back on the free trial.");
+  };
+
+  return (
+    <Card title="Plan & Usage">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <p className="text-sm text-zinc-500">
+          Track how many AI messages your concierge has answered and manage your plan.
+        </p>
+        <span className={cn("inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold", PLAN_META[plan].badge)}>
+          {plan === "free" ? <Zap className="h-3 w-3" /> : <Crown className="h-3 w-3" />}
+          {PLAN_META[plan].name}
+        </span>
+      </div>
+
+      {/* Usage meter */}
+      <div className="mt-6 rounded-2xl border border-zinc-200 bg-zinc-50 p-5">
+        <div className="flex items-end justify-between">
+          <div>
+            <div className="text-3xl font-semibold tracking-tight">
+              {used.toLocaleString()}
+              <span className="text-lg font-medium text-zinc-400"> / {isFree ? limit.toLocaleString() : `${PRO_INCLUDED.toLocaleString()}`}</span>
+            </div>
+            <div className="mt-1 text-sm text-zinc-500">
+              {isFree ? "messages used this trial" : "messages this month"}
+            </div>
+          </div>
+          {isFree && (
+            <div className={cn("text-right text-sm font-medium", out ? "text-red-600" : "text-zinc-500")}>
+              {out ? "Trial used up" : `${remaining} left`}
+            </div>
+          )}
+        </div>
+        <div className="mt-4 h-2.5 w-full overflow-hidden rounded-full bg-zinc-200">
+          <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, background: meterColor }} />
+        </div>
+
+        {out && (
+          <div className="mt-4 flex items-start gap-2 rounded-xl border border-red-100 bg-red-50 p-3 text-sm text-red-700">
+            <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+            <span>Your free trial is used up. Upgrade to keep your concierge answering guests 24/7.</span>
+          </div>
+        )}
+      </div>
+
+      {/* Actions */}
+      <div className="mt-5 flex flex-wrap items-center gap-3">
+        {plan === "free" ? (
+          <Button onClick={() => setShowUpgrade(true)} className="rounded-full bg-zinc-900 text-white hover:bg-zinc-800">
+            <Crown className="mr-1.5 h-3.5 w-3.5" /> Upgrade plan
+          </Button>
+        ) : (
+          <Button onClick={() => setShowUpgrade(true)} variant="outline" className="rounded-full border-zinc-200 bg-white text-zinc-700 hover:bg-zinc-50">
+            <CreditCard className="mr-1.5 h-3.5 w-3.5" /> Manage plan
+          </Button>
+        )}
+        <button onClick={resetDemo} disabled={busy} className="inline-flex items-center gap-1.5 text-sm font-medium text-zinc-500 transition hover:text-zinc-900 disabled:opacity-50">
+          <RotateCcw className="h-3.5 w-3.5" /> Reset demo usage
+        </button>
+      </div>
+
+      {showUpgrade && (
+        <UpgradeModal current={plan} busy={busy} onClose={() => setShowUpgrade(false)} onSelect={subscribe} />
+      )}
+    </Card>
+  );
+}
+
+const PLANS: Array<{
+  id: PlanId; name: string; price: string; cadence: string; note?: string;
+  highlight?: boolean; features: string[];
+}> = [
+  {
+    id: "pro_monthly",
+    name: "Pro",
+    price: "$19",
+    cadence: "/month",
+    features: [
+      "Up to 1,500 AI messages / month",
+      "Reads your menu PDF (RAG)",
+      "Unlimited custom Q&A",
+      "Live guest-question analytics",
+      "Custom branding & action buttons",
+    ],
+  },
+  {
+    id: "pro_annual",
+    name: "Pro Annual",
+    price: "$179",
+    cadence: "/year",
+    note: "Save 22% — ~$14.92/mo",
+    highlight: true,
+    features: [
+      "Everything in Pro, billed yearly",
+      "2 months free vs monthly",
+      "Priority support",
+      "Lock in early-bird pricing",
+    ],
+  },
+];
+
+function UpgradeModal({
+  current, busy, onClose, onSelect,
+}: { current: PlanId; busy: boolean; onClose: () => void; onSelect: (p: PlanId) => void }) {
+  return (
+    <div className="fixed inset-0 z-50 grid place-items-center bg-zinc-900/40 p-4 backdrop-blur-sm" onClick={onClose}>
+      <div className="w-full max-w-2xl overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-2xl" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-start justify-between border-b border-zinc-200 px-6 py-5">
+          <div>
+            <h3 className="text-xl font-semibold tracking-tight">Choose your plan</h3>
+            <p className="mt-1 text-sm text-zinc-500">Simple pricing, less than a single missed reservation. Cancel anytime.</p>
+          </div>
+          <button onClick={onClose} className="rounded-full p-1.5 text-zinc-400 hover:bg-zinc-100 hover:text-zinc-900"><X className="h-4 w-4" /></button>
+        </div>
+
+        <div className="grid gap-4 p-6 sm:grid-cols-2">
+          {PLANS.map((p) => {
+            const isCurrent = current === p.id;
+            return (
+              <div
+                key={p.id}
+                className={cn(
+                  "relative flex flex-col rounded-2xl border p-5",
+                  p.highlight ? "border-[#006aff] ring-1 ring-[#006aff]" : "border-zinc-200",
+                )}
+              >
+                {p.highlight && (
+                  <span className="absolute -top-2.5 left-5 rounded-full bg-[#006aff] px-2.5 py-0.5 text-[11px] font-semibold text-white">Best value</span>
+                )}
+                <div className="text-sm font-semibold text-zinc-900">{p.name}</div>
+                <div className="mt-2 flex items-baseline gap-1">
+                  <span className="text-3xl font-semibold tracking-tight">{p.price}</span>
+                  <span className="text-sm text-zinc-500">{p.cadence}</span>
+                </div>
+                {p.note && <div className="mt-1 text-xs font-medium text-emerald-600">{p.note}</div>}
+                <ul className="mt-4 flex-1 space-y-2">
+                  {p.features.map((f) => (
+                    <li key={f} className="flex items-start gap-2 text-sm text-zinc-600">
+                      <Check className="mt-0.5 h-4 w-4 shrink-0 text-[#006aff]" /> {f}
+                    </li>
+                  ))}
+                </ul>
+                <Button
+                  onClick={() => onSelect(p.id)}
+                  disabled={busy || isCurrent}
+                  className={cn(
+                    "mt-5 w-full rounded-full",
+                    p.highlight ? "bg-[#006aff] text-white hover:bg-[#0057d6]" : "bg-zinc-900 text-white hover:bg-zinc-800",
+                  )}
+                >
+                  {busy ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : null}
+                  {isCurrent ? "Current plan" : `Choose ${p.name}`}
+                </Button>
+              </div>
+            );
+          })}
+        </div>
+
+        <div className="border-t border-zinc-200 bg-zinc-50 px-6 py-3 text-center text-xs text-zinc-400">
+          Demo mode — selecting a plan won't charge you. Real billing comes later.
+        </div>
+      </div>
+    </div>
   );
 }
 

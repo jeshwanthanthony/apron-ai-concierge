@@ -148,6 +148,7 @@ export type Database = {
           dress_code: string | null
           email: string | null
           emergency_contact: string | null
+          free_message_limit: number
           google_maps_link: string | null
           holiday_hours: string | null
           hours: Json | null
@@ -155,6 +156,7 @@ export type Database = {
           instagram_link: string | null
           menu_pdf_path: string | null
           menu_text: string | null
+          messages_used: number
           name: string | null
           onboarding_completed: boolean
           onboarding_step: number
@@ -163,6 +165,7 @@ export type Database = {
           parking_info: string | null
           pet_policy: string | null
           phone: string | null
+          plan: string
           popular_dishes: string | null
           reservation_button_label: string | null
           reservation_link: string | null
@@ -194,6 +197,7 @@ export type Database = {
           dress_code?: string | null
           email?: string | null
           emergency_contact?: string | null
+          free_message_limit?: number
           google_maps_link?: string | null
           holiday_hours?: string | null
           hours?: Json | null
@@ -201,6 +205,7 @@ export type Database = {
           instagram_link?: string | null
           menu_pdf_path?: string | null
           menu_text?: string | null
+          messages_used?: number
           name?: string | null
           onboarding_completed?: boolean
           onboarding_step?: number
@@ -209,6 +214,7 @@ export type Database = {
           parking_info?: string | null
           pet_policy?: string | null
           phone?: string | null
+          plan?: string
           popular_dishes?: string | null
           reservation_button_label?: string | null
           reservation_link?: string | null
@@ -240,6 +246,7 @@ export type Database = {
           dress_code?: string | null
           email?: string | null
           emergency_contact?: string | null
+          free_message_limit?: number
           google_maps_link?: string | null
           holiday_hours?: string | null
           hours?: Json | null
@@ -247,6 +254,7 @@ export type Database = {
           instagram_link?: string | null
           menu_pdf_path?: string | null
           menu_text?: string | null
+          messages_used?: number
           name?: string | null
           onboarding_completed?: boolean
           onboarding_step?: number
@@ -255,6 +263,7 @@ export type Database = {
           parking_info?: string | null
           pet_policy?: string | null
           phone?: string | null
+          plan?: string
           popular_dishes?: string | null
           reservation_button_label?: string | null
           reservation_link?: string | null
@@ -275,6 +284,7 @@ export type Database = {
         Args: { p_restaurant_id: string }
         Returns: Json
       }
+      get_usage: { Args: { p_restaurant_id: string }; Returns: Json }
       get_widget_config: {
         Args: { p_restaurant_id: string }
         Returns: Json
@@ -298,6 +308,11 @@ export type Database = {
           content: string
           similarity: number
         }[]
+      }
+      reset_demo_usage: { Args: { p_restaurant_id: string }; Returns: Json }
+      set_plan: {
+        Args: { p_plan: string; p_restaurant_id: string }
+        Returns: Json
       }
     }
     Enums: {
