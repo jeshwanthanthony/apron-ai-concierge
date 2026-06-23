@@ -18,6 +18,46 @@ export const Route = createFileRoute("/auth")({
   component: AuthPage,
 });
 
+// Impact stats that fade/slide through on the sign-up panel, instead of a
+// single static testimonial.
+const STATS: { value: string; label: string }[] = [
+  { value: "80%", label: "of guest questions answered before they ever reach your host stand" },
+  { value: "24/7", label: "instant answers — your AI concierge never clocks out" },
+  { value: "3 min", label: "to set up and drop onto your website" },
+  { value: "100%", label: "on-brand — your menu, your hours, your voice" },
+  { value: "0 apps", label: "for guests to download — it lives right on your site" },
+];
+
+function RotatingStat() {
+  const [i, setI] = useState(0);
+  useEffect(() => {
+    const t = setInterval(() => setI((x) => (x + 1) % STATS.length), 3800);
+    return () => clearInterval(t);
+  }, []);
+  const s = STATS[i];
+  return (
+    <div className="space-y-6">
+      <div key={i} className="animate-in fade-in slide-in-from-bottom-3 duration-700">
+        <div className="text-6xl font-semibold tracking-tight">{s.value}</div>
+        <p className="mt-3 max-w-md text-lg font-medium leading-snug tracking-tight opacity-90">
+          {s.label}
+        </p>
+      </div>
+      <div className="flex gap-1.5">
+        {STATS.map((_, idx) => (
+          <span
+            key={idx}
+            className={
+              "h-1.5 rounded-full transition-all duration-500 " +
+              (idx === i ? "w-6 bg-white" : "w-1.5 bg-white/40")
+            }
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function AuthPage() {
   const navigate = useNavigate();
   const [mode, setMode] = useState<"signin" | "signup">("signup");
@@ -104,12 +144,7 @@ function AuthPage() {
           </div>
           <span className="font-semibold">Maitre</span>
         </Link>
-        <div className="space-y-4">
-          <p className="text-3xl font-medium leading-snug tracking-tight">
-            "Our concierge handles 80% of guest questions before we even get to the host stand."
-          </p>
-          <p className="text-sm opacity-75">— Chef Elena, Trattoria Roma</p>
-        </div>
+        <RotatingStat />
         <div className="text-xs opacity-60">© Maitre · Built for restaurants</div>
       </div>
 
