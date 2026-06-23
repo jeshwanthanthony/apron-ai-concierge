@@ -14,6 +14,12 @@ import { Route as WidgetTestRouteImport } from './routes/widget-test'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ApiWidgetConfigRouteImport } from './routes/api.widget-config'
+import { Route as ApiStripeWebhookRouteImport } from './routes/api.stripe-webhook'
+import { Route as ApiIngestMenuRouteImport } from './routes/api.ingest-menu'
+import { Route as ApiConciergeRouteImport } from './routes/api.concierge'
+import { Route as ApiCheckoutRouteImport } from './routes/api.checkout'
+import { Route as ApiBillingPortalRouteImport } from './routes/api.billing-portal'
 import { Route as AuthenticatedOnboardingRouteImport } from './routes/_authenticated/onboarding'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 
@@ -41,6 +47,36 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiWidgetConfigRoute = ApiWidgetConfigRouteImport.update({
+  id: '/api/widget-config',
+  path: '/api/widget-config',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiStripeWebhookRoute = ApiStripeWebhookRouteImport.update({
+  id: '/api/stripe-webhook',
+  path: '/api/stripe-webhook',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiIngestMenuRoute = ApiIngestMenuRouteImport.update({
+  id: '/api/ingest-menu',
+  path: '/api/ingest-menu',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiConciergeRoute = ApiConciergeRouteImport.update({
+  id: '/api/concierge',
+  path: '/api/concierge',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiCheckoutRoute = ApiCheckoutRouteImport.update({
+  id: '/api/checkout',
+  path: '/api/checkout',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiBillingPortalRoute = ApiBillingPortalRouteImport.update({
+  id: '/api/billing-portal',
+  path: '/api/billing-portal',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthenticatedOnboardingRoute = AuthenticatedOnboardingRouteImport.update({
   id: '/onboarding',
   path: '/onboarding',
@@ -59,6 +95,12 @@ export interface FileRoutesByFullPath {
   '/widget.js': typeof WidgetDotjsRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/onboarding': typeof AuthenticatedOnboardingRoute
+  '/api/billing-portal': typeof ApiBillingPortalRoute
+  '/api/checkout': typeof ApiCheckoutRoute
+  '/api/concierge': typeof ApiConciergeRoute
+  '/api/ingest-menu': typeof ApiIngestMenuRoute
+  '/api/stripe-webhook': typeof ApiStripeWebhookRoute
+  '/api/widget-config': typeof ApiWidgetConfigRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -67,6 +109,12 @@ export interface FileRoutesByTo {
   '/widget.js': typeof WidgetDotjsRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/onboarding': typeof AuthenticatedOnboardingRoute
+  '/api/billing-portal': typeof ApiBillingPortalRoute
+  '/api/checkout': typeof ApiCheckoutRoute
+  '/api/concierge': typeof ApiConciergeRoute
+  '/api/ingest-menu': typeof ApiIngestMenuRoute
+  '/api/stripe-webhook': typeof ApiStripeWebhookRoute
+  '/api/widget-config': typeof ApiWidgetConfigRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -77,6 +125,12 @@ export interface FileRoutesById {
   '/widget.js': typeof WidgetDotjsRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/onboarding': typeof AuthenticatedOnboardingRoute
+  '/api/billing-portal': typeof ApiBillingPortalRoute
+  '/api/checkout': typeof ApiCheckoutRoute
+  '/api/concierge': typeof ApiConciergeRoute
+  '/api/ingest-menu': typeof ApiIngestMenuRoute
+  '/api/stripe-webhook': typeof ApiStripeWebhookRoute
+  '/api/widget-config': typeof ApiWidgetConfigRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -87,6 +141,12 @@ export interface FileRouteTypes {
     | '/widget.js'
     | '/dashboard'
     | '/onboarding'
+    | '/api/billing-portal'
+    | '/api/checkout'
+    | '/api/concierge'
+    | '/api/ingest-menu'
+    | '/api/stripe-webhook'
+    | '/api/widget-config'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -95,6 +155,12 @@ export interface FileRouteTypes {
     | '/widget.js'
     | '/dashboard'
     | '/onboarding'
+    | '/api/billing-portal'
+    | '/api/checkout'
+    | '/api/concierge'
+    | '/api/ingest-menu'
+    | '/api/stripe-webhook'
+    | '/api/widget-config'
   id:
     | '__root__'
     | '/'
@@ -104,6 +170,12 @@ export interface FileRouteTypes {
     | '/widget.js'
     | '/_authenticated/dashboard'
     | '/_authenticated/onboarding'
+    | '/api/billing-portal'
+    | '/api/checkout'
+    | '/api/concierge'
+    | '/api/ingest-menu'
+    | '/api/stripe-webhook'
+    | '/api/widget-config'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -112,6 +184,12 @@ export interface RootRouteChildren {
   AuthRoute: typeof AuthRoute
   WidgetTestRoute: typeof WidgetTestRoute
   WidgetDotjsRoute: typeof WidgetDotjsRoute
+  ApiBillingPortalRoute: typeof ApiBillingPortalRoute
+  ApiCheckoutRoute: typeof ApiCheckoutRoute
+  ApiConciergeRoute: typeof ApiConciergeRoute
+  ApiIngestMenuRoute: typeof ApiIngestMenuRoute
+  ApiStripeWebhookRoute: typeof ApiStripeWebhookRoute
+  ApiWidgetConfigRoute: typeof ApiWidgetConfigRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -151,6 +229,48 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/widget-config': {
+      id: '/api/widget-config'
+      path: '/api/widget-config'
+      fullPath: '/api/widget-config'
+      preLoaderRoute: typeof ApiWidgetConfigRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/stripe-webhook': {
+      id: '/api/stripe-webhook'
+      path: '/api/stripe-webhook'
+      fullPath: '/api/stripe-webhook'
+      preLoaderRoute: typeof ApiStripeWebhookRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/ingest-menu': {
+      id: '/api/ingest-menu'
+      path: '/api/ingest-menu'
+      fullPath: '/api/ingest-menu'
+      preLoaderRoute: typeof ApiIngestMenuRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/concierge': {
+      id: '/api/concierge'
+      path: '/api/concierge'
+      fullPath: '/api/concierge'
+      preLoaderRoute: typeof ApiConciergeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/checkout': {
+      id: '/api/checkout'
+      path: '/api/checkout'
+      fullPath: '/api/checkout'
+      preLoaderRoute: typeof ApiCheckoutRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/billing-portal': {
+      id: '/api/billing-portal'
+      path: '/api/billing-portal'
+      fullPath: '/api/billing-portal'
+      preLoaderRoute: typeof ApiBillingPortalRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_authenticated/onboarding': {
       id: '/_authenticated/onboarding'
       path: '/onboarding'
@@ -187,7 +307,23 @@ const rootRouteChildren: RootRouteChildren = {
   AuthRoute: AuthRoute,
   WidgetTestRoute: WidgetTestRoute,
   WidgetDotjsRoute: WidgetDotjsRoute,
+  ApiBillingPortalRoute: ApiBillingPortalRoute,
+  ApiCheckoutRoute: ApiCheckoutRoute,
+  ApiConciergeRoute: ApiConciergeRoute,
+  ApiIngestMenuRoute: ApiIngestMenuRoute,
+  ApiStripeWebhookRoute: ApiStripeWebhookRoute,
+  ApiWidgetConfigRoute: ApiWidgetConfigRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}

@@ -14,10 +14,124 @@ export type Database = {
   }
   public: {
     Tables: {
+      menu_chunks: {
+        Row: {
+          chunk_index: number
+          content: string
+          created_at: string
+          embedding: string | null
+          id: string
+          restaurant_id: string
+          source: string
+        }
+        Insert: {
+          chunk_index?: number
+          content: string
+          created_at?: string
+          embedding?: string | null
+          id?: string
+          restaurant_id: string
+          source?: string
+        }
+        Update: {
+          chunk_index?: number
+          content?: string
+          created_at?: string
+          embedding?: string | null
+          id?: string
+          restaurant_id?: string
+          source?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "menu_chunks_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      qa_pairs: {
+        Row: {
+          answer: string
+          created_at: string
+          id: string
+          question: string
+          restaurant_id: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          answer: string
+          created_at?: string
+          id?: string
+          question: string
+          restaurant_id: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          answer?: string
+          created_at?: string
+          id?: string
+          question?: string
+          restaurant_id?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "qa_pairs_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      question_logs: {
+        Row: {
+          answer: string | null
+          created_at: string
+          id: string
+          question: string
+          restaurant_id: string
+          source: string
+        }
+        Insert: {
+          answer?: string | null
+          created_at?: string
+          id?: string
+          question: string
+          restaurant_id: string
+          source?: string
+        }
+        Update: {
+          answer?: string | null
+          created_at?: string
+          id?: string
+          question?: string
+          restaurant_id?: string
+          source?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "question_logs_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       restaurants: {
         Row: {
+          action_buttons: Json | null
           address: string | null
+          allergens: string[] | null
           allergy_info: string | null
+          bot_tone: string | null
           brand_color: string | null
           catering_button_label: string | null
           catering_link: string | null
@@ -25,35 +139,52 @@ export type Database = {
           concierge_name: string | null
           created_at: string
           cuisine_type: string | null
+          daily_free_limit: number
+          daily_specials: string | null
           delivery_pickup: string | null
           dietary_gluten_free: boolean
           dietary_halal: boolean
           dietary_vegan: boolean
           dietary_vegetarian: boolean
+          dress_code: string | null
           email: string | null
+          emergency_contact: string | null
+          free_message_limit: number
           google_maps_link: string | null
+          holiday_hours: string | null
+          hours: Json | null
           id: string
           instagram_link: string | null
           menu_pdf_path: string | null
+          menu_text: string | null
+          messages_used: number
           name: string | null
           onboarding_completed: boolean
           onboarding_step: number
           order_button_label: string | null
           order_online_link: string | null
           parking_info: string | null
+          pet_policy: string | null
           phone: string | null
+          plan: string
+          plan_status: string | null
           popular_dishes: string | null
           reservation_button_label: string | null
           reservation_link: string | null
           story: string | null
+          stripe_customer_id: string | null
+          stripe_subscription_id: string | null
           updated_at: string
           user_id: string
           website_url: string | null
           welcome_message: string | null
         }
         Insert: {
+          action_buttons?: Json | null
           address?: string | null
+          allergens?: string[] | null
           allergy_info?: string | null
+          bot_tone?: string | null
           brand_color?: string | null
           catering_button_label?: string | null
           catering_link?: string | null
@@ -61,35 +192,52 @@ export type Database = {
           concierge_name?: string | null
           created_at?: string
           cuisine_type?: string | null
+          daily_free_limit?: number
+          daily_specials?: string | null
           delivery_pickup?: string | null
           dietary_gluten_free?: boolean
           dietary_halal?: boolean
           dietary_vegan?: boolean
           dietary_vegetarian?: boolean
+          dress_code?: string | null
           email?: string | null
+          emergency_contact?: string | null
+          free_message_limit?: number
           google_maps_link?: string | null
+          holiday_hours?: string | null
+          hours?: Json | null
           id?: string
           instagram_link?: string | null
           menu_pdf_path?: string | null
+          menu_text?: string | null
+          messages_used?: number
           name?: string | null
           onboarding_completed?: boolean
           onboarding_step?: number
           order_button_label?: string | null
           order_online_link?: string | null
           parking_info?: string | null
+          pet_policy?: string | null
           phone?: string | null
+          plan?: string
+          plan_status?: string | null
           popular_dishes?: string | null
           reservation_button_label?: string | null
           reservation_link?: string | null
           story?: string | null
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
           updated_at?: string
           user_id: string
           website_url?: string | null
           welcome_message?: string | null
         }
         Update: {
+          action_buttons?: Json | null
           address?: string | null
+          allergens?: string[] | null
           allergy_info?: string | null
+          bot_tone?: string | null
           brand_color?: string | null
           catering_button_label?: string | null
           catering_link?: string | null
@@ -97,27 +245,41 @@ export type Database = {
           concierge_name?: string | null
           created_at?: string
           cuisine_type?: string | null
+          daily_free_limit?: number
+          daily_specials?: string | null
           delivery_pickup?: string | null
           dietary_gluten_free?: boolean
           dietary_halal?: boolean
           dietary_vegan?: boolean
           dietary_vegetarian?: boolean
+          dress_code?: string | null
           email?: string | null
+          emergency_contact?: string | null
+          free_message_limit?: number
           google_maps_link?: string | null
+          holiday_hours?: string | null
+          hours?: Json | null
           id?: string
           instagram_link?: string | null
           menu_pdf_path?: string | null
+          menu_text?: string | null
+          messages_used?: number
           name?: string | null
           onboarding_completed?: boolean
           onboarding_step?: number
           order_button_label?: string | null
           order_online_link?: string | null
           parking_info?: string | null
+          pet_policy?: string | null
           phone?: string | null
+          plan?: string
+          plan_status?: string | null
           popular_dishes?: string | null
           reservation_button_label?: string | null
           reservation_link?: string | null
           story?: string | null
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
           updated_at?: string
           user_id?: string
           website_url?: string | null
@@ -130,7 +292,40 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_concierge_context: {
+        Args: { p_restaurant_id: string }
+        Returns: Json
+      }
+      get_usage: { Args: { p_restaurant_id: string }; Returns: Json }
+      get_widget_config: {
+        Args: { p_restaurant_id: string }
+        Returns: Json
+      }
+      log_guest_question: {
+        Args: {
+          p_answer: string
+          p_question: string
+          p_restaurant_id: string
+          p_source?: string
+        }
+        Returns: string
+      }
+      match_menu_chunks: {
+        Args: {
+          match_count?: number
+          p_restaurant_id: string
+          query_embedding: string
+        }
+        Returns: {
+          content: string
+          similarity: number
+        }[]
+      }
+      reset_demo_usage: { Args: { p_restaurant_id: string }; Returns: Json }
+      set_plan: {
+        Args: { p_plan: string; p_restaurant_id: string }
+        Returns: Json
+      }
     }
     Enums: {
       [_ in never]: never

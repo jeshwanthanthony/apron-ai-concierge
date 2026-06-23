@@ -111,7 +111,7 @@
 
 @layer base {
   * { border-color: var(--color-border); }
-  html { font-family: var(--font-sans); -webkit-font-smoothing: antialiased; }
+  html { font-family: var(--font-sans); letter-spacing: -0.01em; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
   body {
     background-color: var(--color-background);
     color: var(--color-foreground);

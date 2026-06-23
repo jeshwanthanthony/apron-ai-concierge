@@ -9,38 +9,62 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { ArrowLeft, ArrowRight, Check, Loader2, Sparkles, Upload, FileText, X, Utensils } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { extractPdfText, ingestMenu } from "@/lib/pdf-client";
 
 export const Route = createFileRoute("/_authenticated/onboarding")({
   component: Onboarding,
 });
 
+type DayHours = { closed: boolean; open: string; close: string; kitchen_close: string };
+
+const DAYS: [string, string][] = [
+  ["mon", "Monday"], ["tue", "Tuesday"], ["wed", "Wednesday"], ["thu", "Thursday"],
+  ["fri", "Friday"], ["sat", "Saturday"], ["sun", "Sunday"],
+];
+const defaultDay = (): DayHours => ({ closed: false, open: "11:00", close: "22:00", kitchen_close: "" });
+const defaultHours = (): Record<string, DayHours> => Object.fromEntries(DAYS.map(([k]) => [k, defaultDay()]));
+
+const ALLERGENS = ["Peanuts", "Tree Nuts", "Dairy", "Eggs", "Gluten / Wheat", "Soy", "Fish", "Shellfish", "Sesame"];
+
 type Form = {
-  name: string; website_url: string; address: string; phone: string; email: string;
-  cuisine_type: string; story: string; popular_dishes: string; parking_info: string; delivery_pickup: string;
+  name: string; website_url: string; address: string; phone: string; emergency_contact: string; email: string;
+  hours: Record<string, DayHours>; holiday_hours: string;
+  cuisine_type: string; bot_tone: string; story: string; popular_dishes: string; daily_specials: string;
+  parking_info: string; delivery_pickup: string;
   reservation_link: string; order_online_link: string; catering_link: string; instagram_link: string; google_maps_link: string;
-  menu_pdf_path: string; catering_menu_pdf_path: string; allergy_info: string;
+  pet_policy: string; dress_code: string;
+  menu_pdf_path: string; catering_menu_pdf_path: string;
+  allergens: string[]; allergy_info: string;
   dietary_vegan: boolean; dietary_vegetarian: boolean; dietary_gluten_free: boolean; dietary_halal: boolean;
   concierge_name: string; brand_color: string; welcome_message: string;
   reservation_button_label: string; order_button_label: string; catering_button_label: string;
 };
 
 const empty: Form = {
-  name: "", website_url: "", address: "", phone: "", email: "",
-  cuisine_type: "", story: "", popular_dishes: "", parking_info: "", delivery_pickup: "",
+  name: "", website_url: "", address: "", phone: "", emergency_contact: "", email: "",
+  hours: defaultHours(), holiday_hours: "",
+  cuisine_type: "", bot_tone: "balanced", story: "", popular_dishes: "", daily_specials: "",
+  parking_info: "", delivery_pickup: "",
   reservation_link: "", order_online_link: "", catering_link: "", instagram_link: "", google_maps_link: "",
-  menu_pdf_path: "", catering_menu_pdf_path: "", allergy_info: "",
+  pet_policy: "", dress_code: "",
+  menu_pdf_path: "", catering_menu_pdf_path: "",
+  allergens: [], allergy_info: "",
   dietary_vegan: false, dietary_vegetarian: false, dietary_gluten_free: false, dietary_halal: false,
-  concierge_name: "Concierge", brand_color: "#7c3aed", welcome_message: "Hello! How can I help you today?",
+  concierge_name: "Maître AI", brand_color: "#7c3aed", welcome_message: "Hello! How can I help you today?",
   reservation_button_label: "Reserve a Table", order_button_label: "Order Online", catering_button_label: "Catering Inquiry",
 };
 
 const STEPS = [
-  { n: 1, title: "Restaurant Information", desc: "The essentials guests need to know" },
-  { n: 2, title: "Restaurant Profile", desc: "What makes your restaurant special" },
-  { n: 3, title: "Customer Links", desc: "Where guests take action" },
-  { n: 4, title: "Menu & Dietary", desc: "Upload menus and dietary info" },
-  { n: 5, title: "AI Concierge", desc: "Customize your assistant" },
+  { n: 1, title: "Location & Contact", desc: "Where you are and how to reach you" },
+  { n: 2, title: "Hours", desc: "When you're open — and when the kitchen closes" },
+  { n: 3, title: "Cuisine & Voice", desc: "Your food and how your concierge speaks" },
+  { n: 4, title: "Menu & Allergens", desc: "What you serve and safety information" },
+  { n: 5, title: "Guest Services", desc: "Reservations, parking, and policies" },
+  { n: 6, title: "Your Concierge", desc: "Name, color, and greeting" },
 ];
+const TOTAL = STEPS.length;
+
+type Update = <K extends keyof Form>(k: K, v: Form[K]) => void;
 
 function Onboarding() {
   const navigate = useNavigate();
@@ -50,48 +74,76 @@ function Onboarding() {
   const [saving, setSaving] = useState(false);
   const [done, setDone] = useState(false);
   const [userId, setUserId] = useState<string>("");
+  const [editMode, setEditMode] = useState(false);
 
   useEffect(() => {
     (async () => {
+      const isEdit = typeof window !== "undefined" && new URLSearchParams(window.location.search).get("edit") === "1";
+      setEditMode(isEdit);
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
       setUserId(user.id);
       const { data } = await supabase.from("restaurants").select("*").eq("user_id", user.id).maybeSingle();
       if (data) {
-        if (data.onboarding_completed) {
+        if (data.onboarding_completed && !isEdit) {
           navigate({ to: "/dashboard", replace: true });
           return;
         }
-        setForm({ ...empty, ...Object.fromEntries(Object.entries(data).filter(([, v]) => v !== null)) } as Form);
-        setStep(data.onboarding_step || 1);
+        const loaded = Object.fromEntries(Object.entries(data).filter(([, v]) => v !== null));
+        const merged = { ...empty, ...loaded } as Form;
+        // Ensure every day exists and has all fields (older/partial data is healed).
+        const lh = (merged.hours || {}) as Record<string, Partial<DayHours>>;
+        merged.hours = Object.fromEntries(DAYS.map(([k]) => [k, { ...defaultDay(), ...(lh[k] || {}) }]));
+        if (!Array.isArray(merged.allergens)) merged.allergens = [];
+        setForm(merged);
+        if (!isEdit) setStep(data.onboarding_step || 1);
       }
       setLoading(false);
     })();
   }, [navigate]);
 
-  const update = <K extends keyof Form>(k: K, v: Form[K]) => setForm((f) => ({ ...f, [k]: v }));
+  const update: Update = (k, v) => setForm((f) => ({ ...f, [k]: v }));
 
   const persist = async (nextStep: number, completed = false) => {
     setSaving(true);
-    const { error } = await supabase
-      .from("restaurants")
-      .update({ ...form, onboarding_step: nextStep, onboarding_completed: completed })
-      .eq("user_id", userId);
+    const payload: Record<string, any> = { ...form, onboarding_step: nextStep };
+    if (completed) payload.onboarding_completed = true;
+    const { error } = await supabase.from("restaurants").update(payload).eq("user_id", userId);
     setSaving(false);
     if (error) { toast.error(error.message); return false; }
     return true;
   };
 
+  const validate = (): string | null => {
+    if (step === 1) {
+      if (!form.name.trim()) return "Please add your restaurant name.";
+      if (!form.address.trim()) return "Please add your address.";
+      if (!form.phone.trim()) return "Please add a phone number.";
+    }
+    if (step === 3 && !form.cuisine_type.trim()) return "Please add your cuisine type.";
+    return null;
+  };
+
   const next = async () => {
-    const ok = await persist(Math.min(step + 1, 5));
-    if (ok) setStep((s) => Math.min(s + 1, 5));
+    const err = validate();
+    if (err) { toast.error(err); return; }
+    const ok = await persist(Math.min(step + 1, TOTAL), editMode);
+    if (ok) setStep((s) => Math.min(s + 1, TOTAL));
   };
 
   const back = () => setStep((s) => Math.max(s - 1, 1));
 
+  const jump = async (n: number) => {
+    const ok = await persist(Math.max(n, step), editMode);
+    if (ok) setStep(n);
+  };
+
   const finish = async () => {
-    const ok = await persist(5, true);
-    if (ok) setDone(true);
+    const ok = await persist(TOTAL, true);
+    if (ok) {
+      if (editMode) { toast.success("Saved"); navigate({ to: "/dashboard" }); }
+      else setDone(true);
+    }
   };
 
   if (loading) {
@@ -110,9 +162,15 @@ function Onboarding() {
             </div>
             <span className="text-sm font-semibold">Maitre</span>
           </div>
-          <button onClick={() => supabase.auth.signOut().then(() => navigate({ to: "/" }))} className="text-xs text-muted-foreground hover:text-foreground">
-            Sign out
-          </button>
+          {editMode ? (
+            <button onClick={() => navigate({ to: "/dashboard" })} className="text-xs text-muted-foreground hover:text-foreground">
+              Back to dashboard
+            </button>
+          ) : (
+            <button onClick={() => supabase.auth.signOut().then(() => navigate({ to: "/" }))} className="text-xs text-muted-foreground hover:text-foreground">
+              Sign out
+            </button>
+          )}
         </div>
       </header>
 
@@ -122,37 +180,42 @@ function Onboarding() {
         <div className="mt-12 grid gap-12 lg:grid-cols-[280px_1fr]">
           <aside className="hidden lg:block">
             <div className="sticky top-8 space-y-1">
-              {STEPS.map((s) => (
-                <button
-                  key={s.n}
-                  onClick={() => s.n < step && setStep(s.n)}
-                  className={cn(
-                    "flex w-full items-start gap-3 rounded-xl p-3 text-left transition",
-                    s.n === step && "bg-card shadow-sm",
-                    s.n < step && "cursor-pointer text-muted-foreground hover:bg-card/50",
-                    s.n > step && "cursor-default text-muted-foreground/60",
-                  )}
-                >
-                  <div className={cn(
-                    "mt-0.5 grid h-6 w-6 shrink-0 place-items-center rounded-full text-xs font-medium",
-                    s.n < step && "bg-success text-success-foreground",
-                    s.n === step && "bg-foreground text-background",
-                    s.n > step && "border border-border",
-                  )}>
-                    {s.n < step ? <Check className="h-3 w-3" /> : s.n}
-                  </div>
-                  <div className="min-w-0">
-                    <div className="text-sm font-medium">{s.title}</div>
-                    <div className="text-xs opacity-70">{s.desc}</div>
-                  </div>
-                </button>
-              ))}
+              {STEPS.map((s) => {
+                const clickable = editMode || s.n <= step;
+                return (
+                  <button
+                    key={s.n}
+                    onClick={() => clickable && jump(s.n)}
+                    className={cn(
+                      "flex w-full items-start gap-3 rounded-xl p-3 text-left transition",
+                      s.n === step && "bg-card shadow-sm",
+                      clickable && s.n !== step && "cursor-pointer text-muted-foreground hover:bg-card/50",
+                      !clickable && "cursor-default text-muted-foreground/60",
+                    )}
+                  >
+                    <div className={cn(
+                      "mt-0.5 grid h-6 w-6 shrink-0 place-items-center rounded-full text-xs font-medium",
+                      s.n < step && "bg-success text-success-foreground",
+                      s.n === step && "bg-foreground text-background",
+                      s.n > step && "border border-border",
+                    )}>
+                      {s.n < step ? <Check className="h-3 w-3" /> : s.n}
+                    </div>
+                    <div className="min-w-0">
+                      <div className="text-sm font-medium">{s.title}</div>
+                      <div className="text-xs opacity-70">{s.desc}</div>
+                    </div>
+                  </button>
+                );
+              })}
             </div>
           </aside>
 
           <main>
             <div className="mb-8">
-              <p className="text-xs font-medium uppercase tracking-wider text-accent">Step {step} of 5</p>
+              <p className="text-xs font-medium uppercase tracking-wider text-accent">
+                {editMode ? "Edit details" : `Step ${step} of ${TOTAL}`}
+              </p>
               <h1 className="mt-2 text-3xl font-semibold tracking-tight sm:text-4xl">{STEPS[step - 1].title}</h1>
               <p className="mt-2 text-muted-foreground">{STEPS[step - 1].desc}</p>
             </div>
@@ -163,21 +226,22 @@ function Onboarding() {
               {step === 3 && <Step3 form={form} update={update} />}
               {step === 4 && <Step4 form={form} update={update} userId={userId} />}
               {step === 5 && <Step5 form={form} update={update} />}
+              {step === 6 && <Step6 form={form} update={update} />}
             </div>
 
             <div className="mt-8 flex items-center justify-between">
               <Button variant="ghost" onClick={back} disabled={step === 1} className="rounded-full">
                 <ArrowLeft className="mr-1.5 h-4 w-4" /> Back
               </Button>
-              {step < 5 ? (
+              {step < TOTAL ? (
                 <Button onClick={next} disabled={saving} className="rounded-full bg-gradient-hero px-6 shadow-glow">
                   {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                  Continue <ArrowRight className="ml-1.5 h-4 w-4" />
+                  {editMode ? "Save & continue" : "Continue"} <ArrowRight className="ml-1.5 h-4 w-4" />
                 </Button>
               ) : (
                 <Button onClick={finish} disabled={saving} className="rounded-full bg-gradient-hero px-6 shadow-glow">
                   {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
-                  Launch concierge
+                  {editMode ? "Save changes" : "Launch concierge"}
                 </Button>
               )}
             </div>
@@ -189,26 +253,26 @@ function Onboarding() {
 }
 
 function Progress({ step }: { step: number }) {
+  const pct = Math.round((step / TOTAL) * 100);
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between text-xs text-muted-foreground">
-        <span>Onboarding progress</span>
-        <span className="font-medium text-foreground">{Math.round((step / 5) * 100)}%</span>
+        <span>Setup progress</span>
+        <span className="font-medium text-foreground">{pct}%</span>
       </div>
       <div className="h-1.5 overflow-hidden rounded-full bg-muted">
-        <div
-          className="h-full rounded-full bg-gradient-hero transition-all duration-500 ease-out"
-          style={{ width: `${(step / 5) * 100}%` }}
-        />
+        <div className="h-full rounded-full bg-gradient-hero transition-all duration-500 ease-out" style={{ width: `${pct}%` }} />
       </div>
     </div>
   );
 }
 
-function Field({ label, children, hint }: { label: string; children: React.ReactNode; hint?: string }) {
+function Field({ label, children, hint, required }: { label: string; children: React.ReactNode; hint?: string; required?: boolean }) {
   return (
     <div className="space-y-2">
-      <Label className="text-sm font-medium">{label}</Label>
+      <Label className="text-sm font-medium">
+        {label} {required && <span className="text-accent">*</span>}
+      </Label>
       {children}
       {hint && <p className="text-xs text-muted-foreground">{hint}</p>}
     </div>
@@ -216,75 +280,157 @@ function Field({ label, children, hint }: { label: string; children: React.React
 }
 
 const inputCls = "h-11 rounded-xl";
+const timeCls = "h-9 rounded-lg border border-border bg-background px-2 text-sm outline-none focus:border-foreground";
 
-function Step1({ form, update }: { form: Form; update: <K extends keyof Form>(k: K, v: Form[K]) => void }) {
+function Segmented({ value, onChange, options }: { value: string; onChange: (v: string) => void; options: [string, string][] }) {
+  return (
+    <div className="flex flex-wrap gap-2">
+      {options.map(([val, label]) => (
+        <button
+          key={val}
+          type="button"
+          onClick={() => onChange(val)}
+          className={cn(
+            "rounded-full border px-4 py-2 text-sm font-medium transition",
+            value === val ? "border-foreground bg-foreground text-background" : "border-border hover:border-foreground/40",
+          )}
+        >
+          {label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+/* ------------------------------ Step 1: Location & Contact ------------------------------ */
+function Step1({ form, update }: { form: Form; update: Update }) {
   return (
     <div className="grid gap-5 sm:grid-cols-2">
       <div className="sm:col-span-2">
-        <Field label="Restaurant Name">
+        <Field label="Restaurant Name" required>
           <Input className={inputCls} placeholder="Trattoria Roma" value={form.name} onChange={(e) => update("name", e.target.value)} />
         </Field>
       </div>
-      <Field label="Website URL"><Input className={inputCls} placeholder="https://yoursite.com" value={form.website_url} onChange={(e) => update("website_url", e.target.value)} /></Field>
-      <Field label="Phone Number"><Input className={inputCls} placeholder="(555) 123-4567" value={form.phone} onChange={(e) => update("phone", e.target.value)} /></Field>
       <div className="sm:col-span-2">
-        <Field label="Address"><Input className={inputCls} placeholder="123 Main St, City, State" value={form.address} onChange={(e) => update("address", e.target.value)} /></Field>
+        <Field label="Physical Address" required hint="Used for directions, delivery zones, and hours timezone.">
+          <Input className={inputCls} placeholder="214 Columbus Ave, San Francisco, CA 94133" value={form.address} onChange={(e) => update("address", e.target.value)} />
+        </Field>
       </div>
-      <div className="sm:col-span-2">
-        <Field label="Email"><Input className={inputCls} type="email" placeholder="hello@yoursite.com" value={form.email} onChange={(e) => update("email", e.target.value)} /></Field>
-      </div>
+      <Field label="Main Phone Number" required>
+        <Input className={inputCls} type="tel" placeholder="+1 (415) 555-0142" value={form.phone} onChange={(e) => update("phone", e.target.value)} />
+      </Field>
+      <Field label="Manager / Emergency Contact" hint="Where the concierge routes urgent calls or escalations.">
+        <Input className={inputCls} type="tel" placeholder="+1 (415) 555-0199" value={form.emergency_contact} onChange={(e) => update("emergency_contact", e.target.value)} />
+      </Field>
+      <Field label="Email"><Input className={inputCls} type="email" placeholder="hello@yoursite.com" value={form.email} onChange={(e) => update("email", e.target.value)} /></Field>
+      <Field label="Website"><Input className={inputCls} placeholder="https://yoursite.com" value={form.website_url} onChange={(e) => update("website_url", e.target.value)} /></Field>
     </div>
   );
 }
 
-function Step2({ form, update }: { form: Form; update: <K extends keyof Form>(k: K, v: Form[K]) => void }) {
+/* ------------------------------ Step 2: Hours ------------------------------ */
+function Step2({ form, update }: { form: Form; update: Update }) {
+  const setDay = (day: string, patch: Partial<DayHours>) =>
+    update("hours", { ...form.hours, [day]: { ...(form.hours[day] || defaultDay()), ...patch } });
+
   return (
-    <div className="space-y-5">
-      <Field label="Cuisine Type"><Input className={inputCls} placeholder="Italian, Mediterranean" value={form.cuisine_type} onChange={(e) => update("cuisine_type", e.target.value)} /></Field>
-      <Field label="Restaurant Story" hint="A short story about your restaurant. Helps the concierge sound like you.">
-        <Textarea rows={4} className="rounded-xl" placeholder="Founded in 1995, we bring authentic Roman recipes..." value={form.story} onChange={(e) => update("story", e.target.value)} />
+    <div className="space-y-6">
+      <Field label="Weekly Hours" hint="Uncheck a day to mark it closed. Set a separate kitchen-closing time if it differs from the dining room.">
+        <div className="space-y-2.5">
+          {DAYS.map(([key, label]) => {
+            const d = form.hours[key] || defaultDay();
+            return (
+              <div key={key} className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-xl border border-border bg-background p-3">
+                <label className="flex w-[120px] items-center gap-2">
+                  <Checkbox checked={!d.closed} onCheckedChange={(v) => setDay(key, { closed: !v })} />
+                  <span className="text-sm font-medium">{label}</span>
+                </label>
+                {d.closed ? (
+                  <span className="text-sm text-muted-foreground">Closed</span>
+                ) : (
+                  <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+                    <input type="time" value={d.open} onChange={(e) => setDay(key, { open: e.target.value })} className={timeCls} />
+                    <span>–</span>
+                    <input type="time" value={d.close} onChange={(e) => setDay(key, { close: e.target.value })} className={timeCls} />
+                    <span className="ml-2 text-xs">Kitchen closes</span>
+                    <input type="time" value={d.kitchen_close} onChange={(e) => setDay(key, { kitchen_close: e.target.value })} className={timeCls} />
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
       </Field>
-      <Field label="Popular Dishes" hint="Comma separated">
+      <Field label="Holiday & Special Hours" hint="Any exceptions guests should know — e.g. closed on Thanksgiving, limited hours on Dec 24.">
+        <Textarea rows={3} className="rounded-xl" placeholder="Closed Thanksgiving & Christmas Day. Dec 24: 11am–4pm." value={form.holiday_hours} onChange={(e) => update("holiday_hours", e.target.value)} />
+      </Field>
+    </div>
+  );
+}
+
+/* ------------------------------ Step 3: Cuisine & Voice ------------------------------ */
+function Step3({ form, update }: { form: Form; update: Update }) {
+  return (
+    <div className="space-y-6">
+      <Field label="Cuisine Type" required>
+        <Input className={inputCls} placeholder="Italian · Wood-fired pizza" value={form.cuisine_type} onChange={(e) => update("cuisine_type", e.target.value)} />
+      </Field>
+      <Field label="Concierge Voice & Tone" hint="How your AI host speaks to guests.">
+        <Segmented
+          value={form.bot_tone}
+          onChange={(v) => update("bot_tone", v)}
+          options={[["casual", "Casual & Friendly"], ["balanced", "Warm & Balanced"], ["formal", "Polished & Formal"]]}
+        />
+      </Field>
+      <Field label="Restaurant Story" hint="A short story about your restaurant — helps the concierge sound like you.">
+        <Textarea rows={4} className="rounded-xl" placeholder="Founded in 1995, we bring authentic Roman recipes to North Beach..." value={form.story} onChange={(e) => update("story", e.target.value)} />
+      </Field>
+      <Field label="Popular Dishes" hint="Comma separated.">
         <Textarea rows={2} className="rounded-xl" placeholder="Cacio e Pepe, Saltimbocca alla Romana, Tiramisu" value={form.popular_dishes} onChange={(e) => update("popular_dishes", e.target.value)} />
       </Field>
-      <div className="grid gap-5 sm:grid-cols-2">
-        <Field label="Parking Information"><Input className={inputCls} placeholder="Street parking & valet" value={form.parking_info} onChange={(e) => update("parking_info", e.target.value)} /></Field>
-        <Field label="Delivery & Pickup"><Input className={inputCls} placeholder="DoorDash, in-house pickup" value={form.delivery_pickup} onChange={(e) => update("delivery_pickup", e.target.value)} /></Field>
-      </div>
+      <Field label="Daily Specials / Notes" hint="Anything not on the printed menu the concierge should mention.">
+        <Textarea rows={2} className="rounded-xl" placeholder="Tuesday: half-price bottles. Weekend brunch 10am–2pm." value={form.daily_specials} onChange={(e) => update("daily_specials", e.target.value)} />
+      </Field>
     </div>
   );
 }
 
-function Step3({ form, update }: { form: Form; update: <K extends keyof Form>(k: K, v: Form[K]) => void }) {
-  return (
-    <div className="grid gap-5 sm:grid-cols-2">
-      <Field label="Reservation Link"><Input className={inputCls} placeholder="https://opentable.com/..." value={form.reservation_link} onChange={(e) => update("reservation_link", e.target.value)} /></Field>
-      <Field label="Order Online Link"><Input className={inputCls} placeholder="https://order.toasttab.com/..." value={form.order_online_link} onChange={(e) => update("order_online_link", e.target.value)} /></Field>
-      <Field label="Catering Inquiry Link"><Input className={inputCls} placeholder="https://yoursite.com/catering" value={form.catering_link} onChange={(e) => update("catering_link", e.target.value)} /></Field>
-      <Field label="Instagram Link"><Input className={inputCls} placeholder="https://instagram.com/..." value={form.instagram_link} onChange={(e) => update("instagram_link", e.target.value)} /></Field>
-      <div className="sm:col-span-2">
-        <Field label="Google Maps Link"><Input className={inputCls} placeholder="https://goo.gl/maps/..." value={form.google_maps_link} onChange={(e) => update("google_maps_link", e.target.value)} /></Field>
-      </div>
-    </div>
-  );
-}
+/* ------------------------------ Step 4: Menu & Allergens ------------------------------ */
+function Step4({ form, update, userId }: { form: Form; update: Update; userId: string }) {
+  const toggleAllergen = (a: string) =>
+    update("allergens", form.allergens.includes(a) ? form.allergens.filter((x) => x !== a) : [...form.allergens, a]);
 
-function Step4({ form, update, userId }: { form: Form; update: <K extends keyof Form>(k: K, v: Form[K]) => void; userId: string }) {
   return (
     <div className="space-y-6">
       <div className="grid gap-5 sm:grid-cols-2">
-        <FileUpload label="Menu PDF" path={form.menu_pdf_path} userId={userId} onChange={(p) => update("menu_pdf_path", p)} />
-        <FileUpload label="Catering Menu PDF" path={form.catering_menu_pdf_path} userId={userId} onChange={(p) => update("catering_menu_pdf_path", p)} />
+        <FileUpload label="Menu PDF" path={form.menu_pdf_path} userId={userId} source="menu" onChange={(p) => update("menu_pdf_path", p)} />
+        <FileUpload label="Catering Menu PDF" path={form.catering_menu_pdf_path} userId={userId} source="catering_menu" onChange={(p) => update("catering_menu_pdf_path", p)} />
       </div>
-      <Field label="Allergy Information" hint="Anything guests should know about allergens, cross-contamination, etc.">
-        <Textarea rows={3} className="rounded-xl" placeholder="We can accommodate most allergies. Please notify your server..." value={form.allergy_info} onChange={(e) => update("allergy_info", e.target.value)} />
+
+      <Field label="Allergens Present in the Kitchen" hint="The concierge will flag these and always remind guests to notify staff about severe allergies.">
+        <div className="flex flex-wrap gap-2">
+          {ALLERGENS.map((a) => (
+            <button
+              key={a}
+              type="button"
+              onClick={() => toggleAllergen(a)}
+              className={cn(
+                "rounded-full border px-3.5 py-2 text-sm font-medium transition",
+                form.allergens.includes(a) ? "border-foreground bg-foreground text-background" : "border-border hover:border-foreground/40",
+              )}
+            >
+              {a}
+            </button>
+          ))}
+        </div>
       </Field>
+
       <div>
-        <Label className="mb-3 block text-sm font-medium">Dietary Options</Label>
+        <Label className="mb-3 block text-sm font-medium">Dietary Options Offered</Label>
         <div className="grid gap-3 sm:grid-cols-2">
           {([
             ["dietary_vegan", "Vegan"], ["dietary_vegetarian", "Vegetarian"],
-            ["dietary_gluten_free", "Gluten Free"], ["dietary_halal", "Halal"],
+            ["dietary_gluten_free", "Gluten-Free options"], ["dietary_halal", "Halal"],
           ] as const).map(([key, label]) => (
             <label key={key} className={cn(
               "flex cursor-pointer items-center gap-3 rounded-xl border p-4 transition",
@@ -296,11 +442,15 @@ function Step4({ form, update, userId }: { form: Form; update: <K extends keyof 
           ))}
         </div>
       </div>
+
+      <Field label="Allergen & Safety Disclaimer" hint="Your kitchen's cross-contamination policy, in your words.">
+        <Textarea rows={3} className="rounded-xl" placeholder="We handle nuts and shellfish in a shared kitchen. Please notify your server of any severe allergies on arrival." value={form.allergy_info} onChange={(e) => update("allergy_info", e.target.value)} />
+      </Field>
     </div>
   );
 }
 
-function FileUpload({ label, path, userId, onChange }: { label: string; path: string; userId: string; onChange: (p: string) => void }) {
+function FileUpload({ label, path, userId, onChange, source }: { label: string; path: string; userId: string; onChange: (p: string) => void; source?: "menu" | "catering_menu" }) {
   const [uploading, setUploading] = useState(false);
   const handle = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -308,10 +458,22 @@ function FileUpload({ label, path, userId, onChange }: { label: string; path: st
     setUploading(true);
     const filePath = `${userId}/${Date.now()}-${file.name}`;
     const { error } = await supabase.storage.from("menus").upload(filePath, file, { upsert: true });
-    setUploading(false);
-    if (error) { toast.error(error.message); return; }
+    if (error) { setUploading(false); toast.error(error.message); return; }
     onChange(filePath);
     toast.success("Uploaded");
+
+    if (source) {
+      try {
+        const text = await extractPdfText(file);
+        if (text.trim()) {
+          const n = await ingestMenu(text, source);
+          toast.success(`Indexed for your concierge (${n} sections).`);
+        }
+      } catch (err) {
+        console.error("[onboarding] menu index failed", err);
+      }
+    }
+    setUploading(false);
   };
   return (
     <div className="space-y-2">
@@ -337,7 +499,47 @@ function FileUpload({ label, path, userId, onChange }: { label: string; path: st
   );
 }
 
-function Step5({ form, update }: { form: Form; update: <K extends keyof Form>(k: K, v: Form[K]) => void }) {
+/* ------------------------------ Step 5: Guest Services ------------------------------ */
+function Step5({ form, update }: { form: Form; update: Update }) {
+  return (
+    <div className="space-y-6">
+      <div className="grid gap-5 sm:grid-cols-2">
+        <Field label="Reservation Link" hint="OpenTable, Resy, SevenRooms, etc."><Input className={inputCls} placeholder="https://opentable.com/your-restaurant" value={form.reservation_link} onChange={(e) => update("reservation_link", e.target.value)} /></Field>
+        <Field label="Order Online Link"><Input className={inputCls} placeholder="https://order.toasttab.com/..." value={form.order_online_link} onChange={(e) => update("order_online_link", e.target.value)} /></Field>
+        <Field label="Catering Inquiry Link"><Input className={inputCls} placeholder="https://yoursite.com/catering" value={form.catering_link} onChange={(e) => update("catering_link", e.target.value)} /></Field>
+        <Field label="Delivery & Pickup"><Input className={inputCls} placeholder="DoorDash, Uber Eats, in-house pickup" value={form.delivery_pickup} onChange={(e) => update("delivery_pickup", e.target.value)} /></Field>
+      </div>
+
+      <Field label="Parking & Transit" hint="Frees your host stand from repeat calls.">
+        <Textarea rows={2} className="rounded-xl" placeholder="Street parking and free validation at the 4th St garage. Two blocks from Powell St BART." value={form.parking_info} onChange={(e) => update("parking_info", e.target.value)} />
+      </Field>
+
+      <Field label="Pet & Patio Policy">
+        <Segmented
+          value={form.pet_policy}
+          onChange={(v) => update("pet_policy", v)}
+          options={[["patio", "Dogs welcome on patio"], ["service_only", "Service animals only"], ["none", "No pets"]]}
+        />
+      </Field>
+
+      <Field label="Dress Code">
+        <Segmented
+          value={form.dress_code}
+          onChange={(v) => update("dress_code", v)}
+          options={[["", "None"], ["casual", "Casual"], ["smart_casual", "Smart Casual"], ["business_formal", "Business / Formal"]]}
+        />
+      </Field>
+
+      <div className="grid gap-5 sm:grid-cols-2">
+        <Field label="Instagram"><Input className={inputCls} placeholder="https://instagram.com/..." value={form.instagram_link} onChange={(e) => update("instagram_link", e.target.value)} /></Field>
+        <Field label="Google Maps"><Input className={inputCls} placeholder="https://goo.gl/maps/..." value={form.google_maps_link} onChange={(e) => update("google_maps_link", e.target.value)} /></Field>
+      </div>
+    </div>
+  );
+}
+
+/* ------------------------------ Step 6: Concierge ------------------------------ */
+function Step6({ form, update }: { form: Form; update: Update }) {
   return (
     <div className="grid gap-8 lg:grid-cols-[1fr_320px]">
       <div className="space-y-5">

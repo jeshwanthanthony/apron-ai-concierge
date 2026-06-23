@@ -23,6 +23,11 @@ function createSupabaseClient() {
       storage: typeof window !== 'undefined' ? localStorage : undefined,
       persistSession: true,
       autoRefreshToken: true,
+      // OAuth (Google) returns to the app with a `?code=` param; detect and
+      // exchange it for a session automatically on page load. PKCE is the
+      // secure default for browser-based OAuth.
+      detectSessionInUrl: true,
+      flowType: 'pkce',
     }
   });
 }

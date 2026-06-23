@@ -12,4 +12,12 @@ export default defineConfig({
     // nitro/vite builds from this
     server: { entry: "server" },
   },
+  // Force-enable the Nitro build off-Lovable (the plugin otherwise skips it
+  // outside Lovable's sandbox, which breaks `vite build`). This targets
+  // Cloudflare Workers and emits a deployable bundle in `.output/` with a
+  // generated `.output/server/wrangler.json` (so `npx wrangler deploy` works
+  // from the repo root). Override the target with NITRO_PRESET if needed
+  // (e.g. `cloudflare-pages` for a Pages/Git deploy).
+  nitro: { preset: "cloudflare-module" },
 });
+

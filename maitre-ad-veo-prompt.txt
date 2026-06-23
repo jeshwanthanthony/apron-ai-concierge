@@ -1,0 +1,49 @@
+============================================================
+MAITRE — AI CONCIERGE  •  15-SECOND PRODUCT-DEMO AD
+Veo / Gemini video prompt  (attach the 5 screenshots listed below)
+============================================================
+
+--------------------------------------------------
+SCREENSHOTS TO CAPTURE & ATTACH (from localhost:8080, logged in)
+--------------------------------------------------
+01-landing.png          ->  /  (landing page, top nav with "Get started")
+02-auth.png             ->  /auth  (the "Continue with Google" button)
+03-onboarding.png       ->  /onboarding menu step ("Click to upload PDF")
+04-dashboard-snippet.png->  /dashboard  Widget Installation card (snippet + Copy)
+05-chat.png             ->  /dashboard  "Test Your Concierge" chat card
+
+Exact embed snippet to render verbatim in Shot 4:
+<script src="https://app.maitre.ai/widget.js" data-restaurant="r_8fa2" data-color="#E8843C" data-name="Concierge" async></script>
+
+
+==================== PROMPT (paste everything below) ====================
+
+Clean, premium 15-second product-demo ad (screen-recording style, no people) for "Maitre," an AI concierge for restaurant websites. Use the attached screenshots as the EXACT UI — match their layout, colors, fonts, and wording precisely. CRITICAL: every piece of on-screen text must be real, correct, clearly legible English — do NOT invent placeholder, Latin, or gibberish text; if unsure, leave a surface blank rather than inventing words. Apple-keynote motion: a sleek macOS cursor moves smoothly; each click triggers a satisfying micro–zoom-in (camera punches ~15% toward the cursor with a soft ripple, then eases back). Gentle whoosh transitions, warm minimal background music.
+
+Shot 1 (0–3s) — use 01-landing.png: the Maitre landing page. Cursor glides to the "Get started" button, zoom-in, clean click ripple. Whoosh.
+
+Shot 2 (3–5s) — use 02-auth.png: cursor clicks "Continue with Google," satisfying zoom on the click.
+
+Shot 3 (5–8s) — use 03-onboarding.png: cursor clicks the "Click to upload PDF" drop zone, a menu PDF animates up into the box, then a green "Indexed for AI ✓" toast slides in.
+
+Shot 4 (8–11s) — use 04-dashboard-snippet.png: cursor clicks "Copy snippet," a "Copied ✓" flashes. Whoosh into a Wix code field where this exact snippet types out in a monospaced font, rendered legibly and character-for-character: <script src="https://app.maitre.ai/widget.js" data-restaurant="r_8fa2" data-color="#E8843C" data-name="Concierge" async></script> then the cursor presses Enter with a soft confirmation glow.
+
+Shot 5 (11–15s) — use 05-chat.png: a restaurant site with the floating brand-colored chat bubble bottom-right. Cursor clicks it, zoom-in, the polished chat opens (avatar, green "Online" dot). A guest message appears: "Do you have vegan options?" Three typing dots animate, then a warm reply types out cleanly: "We do! 🌿 Our roasted-beet risotto and charred cauliflower are guest favorites — want me to hold you a table?"
+
+Ending + loop (last ~2s): the chat gently scales down as the camera pulls back to reveal the full restaurant website with the glowing chat bubble; a soft "✓ Live on your website" badge fades in; then a clean end card with the Maitre logo and the tagline "Your AI concierge, live in minutes." Make this seamlessly loopable: the final frame should match the opening landing-page shot with a smooth crossfade, so the video loops invisibly. No abrupt cut — the motion should feel like one continuous journey that returns to the start.
+
+Style: 16:9, 4K, glossy white-and-warm UI, shallow depth-of-field on zoom-ins, 60fps smooth cursor, satisfying click feedback, all text legible and spelled correctly.
+
+==================== END PROMPT ====================
+
+
+--------------------------------------------------
+TIPS
+--------------------------------------------------
+• AI video garbles small text/code. Keep text big; for a perfectly legible
+  code snippet + chat, screen-record the real app and add zoom/cursor FX in
+  an editor (CapCut / Premiere) instead.
+• 8-second cap? Generate Shots 1–3 as clip A and Shots 4–5+ending as clip B,
+  then stitch — they're cut to splice cleanly.
+• Loop: first and last frames are the same landing shot. If the tool has a
+  "seamless / loop" toggle, turn it on too.

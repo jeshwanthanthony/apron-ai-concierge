@@ -1,5 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { Sparkles, MessageCircle, Utensils, ArrowRight, Check } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Sparkles, Utensils, ArrowRight } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -14,109 +16,88 @@ export const Route = createFileRoute("/")({
 });
 
 function Landing() {
+  const [signedIn, setSignedIn] = useState(false);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => setSignedIn(!!data.session));
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, session) => setSignedIn(!!session));
+    return () => subscription.unsubscribe();
+  }, []);
+
   return (
     <div className="min-h-screen bg-background">
-      {/* Nav */}
+      {/* Nav — just the logo. The CTA below handles sign up / dashboard. */}
       <header className="px-6 py-6 sm:px-10">
         <nav className="mx-auto flex max-w-6xl items-center justify-between">
-          <div className="flex items-center gap-2">
+          <Link to={signedIn ? "/dashboard" : "/"} className="flex items-center gap-2">
             <div className="grid h-9 w-9 place-items-center rounded-xl bg-gradient-hero text-primary-foreground">
               <Utensils className="h-4 w-4" />
             </div>
             <span className="text-base font-semibold tracking-tight">Maitre</span>
-          </div>
-          <div className="flex items-center gap-3">
-            <Link to="/auth" className="text-sm font-medium text-muted-foreground hover:text-foreground">
-              Sign in
-            </Link>
-            <Link
-              to="/auth"
-              className="inline-flex items-center gap-1.5 rounded-full bg-foreground px-4 py-2 text-sm font-medium text-background transition hover:opacity-90"
-            >
-              Get started <ArrowRight className="h-3.5 w-3.5" />
-            </Link>
-          </div>
+          </Link>
         </nav>
       </header>
 
-      {/* Hero */}
-      <section className="px-6 pb-24 pt-16 sm:px-10 sm:pt-24">
-        <div className="mx-auto max-w-4xl text-center">
-          <div className="mx-auto inline-flex items-center gap-2 rounded-full border border-border bg-card px-3.5 py-1.5 text-xs font-medium text-muted-foreground shadow-sm">
-            <Sparkles className="h-3.5 w-3.5 text-accent" />
-            Now in private beta for Wix & Squarespace restaurants
-          </div>
-          <h1 className="mt-8 text-5xl font-semibold leading-[1.05] tracking-tight sm:text-7xl">
-            The AI concierge <br className="hidden sm:block" />
-            <span className="text-gradient-hero">your restaurant deserves.</span>
-          </h1>
-          <p className="mx-auto mt-7 max-w-2xl text-lg text-muted-foreground sm:text-xl">
-            Answer guest questions, take reservations, and showcase your menu — all from one elegant widget that lives on your site.
-          </p>
-          <div className="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row">
-            <Link
-              to="/auth"
-              className="inline-flex items-center gap-2 rounded-full bg-gradient-hero px-7 py-3.5 text-base font-medium text-primary-foreground shadow-glow transition hover:opacity-95"
-            >
-              Set up your concierge <ArrowRight className="h-4 w-4" />
-            </Link>
-            <span className="text-sm text-muted-foreground">5-minute onboarding · No credit card</span>
-          </div>
-        </div>
-
-        {/* Preview Card */}
-        <div className="mx-auto mt-20 max-w-3xl">
-          <div className="overflow-hidden rounded-3xl border border-border bg-gradient-card shadow-elegant">
-            <div className="flex items-center gap-2 border-b border-border px-5 py-3">
-              <div className="h-2.5 w-2.5 rounded-full bg-muted" />
-              <div className="h-2.5 w-2.5 rounded-full bg-muted" />
-              <div className="h-2.5 w-2.5 rounded-full bg-muted" />
-              <div className="ml-3 text-xs text-muted-foreground">trattoria-roma.com</div>
+      {/* Hero — headline left, video window right */}
+      <section className="flex min-h-[85vh] items-center px-6 pb-16 pt-4 sm:px-10">
+        <div className="mx-auto grid w-full max-w-7xl items-center gap-10 lg:grid-cols-[1fr_1.3fr] lg:gap-16">
+          {/* Left: pitch */}
+          <div className="text-center lg:text-left">
+            <div className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-3.5 py-1.5 text-xs font-medium text-muted-foreground shadow-sm">
+              <Sparkles className="h-3.5 w-3.5 text-accent" />
+              Now in private beta for Wix &amp; Squarespace restaurants
             </div>
-            <div className="grid gap-4 p-8 sm:grid-cols-[1fr_auto]">
-              <div className="space-y-3">
-                <div className="inline-flex items-center gap-2 rounded-full bg-warm/60 px-3 py-1 text-xs font-medium">
-                  <MessageCircle className="h-3 w-3" /> Concierge · Online
-                </div>
-                <p className="text-lg">
-                  <span className="text-muted-foreground">Buongiorno!</span> I'd love to help you plan your visit. Looking for a table tonight?
-                </p>
-                <div className="flex flex-wrap gap-2 pt-2">
-                  <span className="rounded-full border border-border bg-card px-3 py-1.5 text-xs">Reserve a table</span>
-                  <span className="rounded-full border border-border bg-card px-3 py-1.5 text-xs">View menu</span>
-                  <span className="rounded-full border border-border bg-card px-3 py-1.5 text-xs">Catering</span>
-                </div>
-              </div>
-              <div className="grid h-14 w-14 place-items-center rounded-2xl bg-gradient-hero text-primary-foreground sm:h-16 sm:w-16">
-                <Sparkles className="h-6 w-6" />
+            <h1 className="mt-6 text-5xl font-semibold leading-[1.05] tracking-tight sm:text-6xl">
+              The AI concierge <span className="text-gradient-hero">your restaurant deserves.</span>
+            </h1>
+            <p className="mx-auto mt-6 max-w-xl text-lg text-muted-foreground lg:mx-0">
+              Answer guest questions, take reservations, and showcase your menu — all from one elegant widget that lives on your site.
+            </p>
+            <p className="mt-8 text-sm text-muted-foreground">5-minute onboarding · No credit card</p>
+          </div>
+
+          {/* Right: video window with the jumping CTA over the watermark */}
+          <div className="relative overflow-hidden rounded-3xl border border-border bg-foreground shadow-elegant">
+            <video
+              src="/maitre-ad.mp4"
+              autoPlay
+              loop
+              muted
+              playsInline
+              preload="auto"
+              onLoadedMetadata={(e) => { e.currentTarget.playbackRate = 0.75; }}
+              onPlay={(e) => { e.currentTarget.playbackRate = 0.75; }}
+              className="block aspect-video w-full object-cover"
+            />
+            {/* Bottom scrim covers the watermark; CTA sits bottom-right over the Gemini mark */}
+            <div className="pointer-events-none absolute inset-x-0 bottom-0 flex justify-end bg-gradient-to-t from-black/80 via-black/40 to-transparent p-5 pt-20 sm:p-6">
+              <div className="pointer-events-auto relative">
+                <span className="absolute inset-0 -z-10 animate-ping rounded-full bg-white/25" />
+                <Link
+                  to={signedIn ? "/dashboard" : "/auth"}
+                  className="maitre-attn group inline-flex items-center gap-2.5 rounded-full bg-gradient-hero px-8 py-3.5 text-base font-semibold text-primary-foreground shadow-glow ring-4 ring-white/25 transition hover:ring-white/50"
+                >
+                  {signedIn ? "Open your dashboard" : "Try it free"}
+                  <ArrowRight className="h-5 w-5 transition group-hover:translate-x-1" />
+                </Link>
               </div>
             </div>
           </div>
         </div>
-      </section>
 
-      {/* Features */}
-      <section className="border-t border-border bg-gradient-soft px-6 py-24 sm:px-10">
-        <div className="mx-auto max-w-5xl">
-          <h2 className="max-w-2xl text-3xl font-semibold tracking-tight sm:text-4xl">
-            Everything your guests need, beautifully presented.
-          </h2>
-          <div className="mt-14 grid gap-6 sm:grid-cols-3">
-            {[
-              { t: "Reservations", d: "Send guests to your booking link with one tap, in any language." },
-              { t: "Menu intelligence", d: "Upload a PDF — we handle allergens, dietary tags, and questions." },
-              { t: "Brand-perfect", d: "Pick a color, set a tone. Your concierge feels like part of your site." },
-            ].map((f) => (
-              <div key={f.t} className="rounded-2xl border border-border bg-card p-7 shadow-sm">
-                <div className="grid h-10 w-10 place-items-center rounded-xl bg-warm">
-                  <Check className="h-5 w-5 text-primary" />
-                </div>
-                <h3 className="mt-5 text-lg font-semibold">{f.t}</h3>
-                <p className="mt-2 text-sm text-muted-foreground">{f.d}</p>
-              </div>
-            ))}
-          </div>
-        </div>
+        <style>{`
+          @keyframes maitre-attn {
+            0%, 100% { transform: translateY(0) rotate(0deg); }
+            8%  { transform: translateY(-12px) rotate(-3deg); }
+            16% { transform: translateY(0) rotate(3deg); }
+            24% { transform: translateY(-7px) rotate(-2deg); }
+            32% { transform: translateY(0) rotate(1deg); }
+            40% { transform: translateY(0) rotate(0deg); }
+          }
+          .maitre-attn { animation: maitre-attn 2.2s ease-in-out infinite; will-change: transform; }
+          .maitre-attn:hover { animation-play-state: paused; transform: scale(1.06); }
+          @media (prefers-reduced-motion: reduce) { .maitre-attn { animation: none; } }
+        `}</style>
       </section>
 
       <footer className="border-t border-border px-6 py-10 text-center text-sm text-muted-foreground">

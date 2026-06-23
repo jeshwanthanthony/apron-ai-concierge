@@ -1,7 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
+import type { Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
-import { lovable } from "@/integrations/lovable/index";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -26,9 +26,28 @@ function AuthPage() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => {
-      if (data.user) navigate({ to: "/onboarding", replace: true });
-    });
+    // Surface an OAuth error that Google/Supabase may append to the callback URL.
+    const params = new URLSearchParams(
+      window.location.search + "&" + window.location.hash.replace(/^#/, ""),
+    );
+    const oauthError = params.get("error_description") || params.get("error");
+    if (oauthError) toast.error(decodeURIComponent(oauthError.replace(/\+/g, " ")));
+
+    const goIfAuthed = (session: Session | null) => {
+      if (session) navigate({ to: "/onboarding", replace: true });
+    };
+
+    // Fires once the OAuth `?code=` is exchanged for a session (Google flow),
+    // and also covers users who are already signed in.
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => goIfAuthed(session));
+
+    // getSession() awaits the in-flight URL code exchange, so this resolves
+    // with the session even on the first paint after the OAuth redirect.
+    supabase.auth.getSession().then(({ data }) => goIfAuthed(data.session));
+
+    return () => subscription.unsubscribe();
   }, [navigate]);
 
   const handleEmail = async (e: React.FormEvent) => {
@@ -58,16 +77,21 @@ function AuthPage() {
 
   const handleGoogle = async () => {
     setLoading(true);
-    const result = await lovable.auth.signInWithOAuth("google", {
-      redirect_uri: window.location.origin + "/onboarding",
+    // Native Supabase OAuth: redirects the browser to Google, then back to
+    // /auth with a `?code=` that the client exchanges for a session. On first
+    // sign-in, the `handle_new_user` DB trigger saves the account automatically.
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: {
+        redirectTo: window.location.origin + "/auth",
+        queryParams: { prompt: "select_account" },
+      },
     });
-    if (result.error) {
-      toast.error(result.error.message);
+    if (error) {
+      toast.error(error.message);
       setLoading(false);
-      return;
     }
-    if (result.redirected) return;
-    navigate({ to: "/onboarding", replace: true });
+    // On success the browser navigates away to Google; nothing else runs here.
   };
 
   return (

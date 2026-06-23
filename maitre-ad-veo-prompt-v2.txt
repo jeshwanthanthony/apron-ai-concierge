@@ -1,0 +1,92 @@
+============================================================
+MAITRE — AI CONCIERGE  •  20-SECOND DEMO AD (two 10s parts)
+Veo / Gemini video prompts. Generate PART 1 first, then PART 2.
+Attach your real UI screenshots if you have them (01-landing, 02-auth,
+03-onboarding, 04-dashboard-snippet, 05-chat).
+============================================================
+
+GLOBAL RULES (apply to BOTH parts — keep them in each prompt):
+- Match the attached screenshots exactly for the UI (layout, colors, fonts).
+- EVERY piece of on-screen text must be real, correct, clearly legible English.
+  Do NOT invent placeholder, Latin, or gibberish words. If unsure, leave blank.
+- Pace is SLOW, calm, and premium. The cursor moves smoothly and unhurried;
+  linger ~3 seconds on each screen. Relaxed walkthrough, not a fast montage.
+- Screen-recording style, no people. Clean macOS cursor. Each click does a
+  gentle micro zoom-in with a soft ripple, then eases back. Soft whoosh
+  transitions. Warm, minimal background music. 16:9, 4K.
+
+Exact embed snippet to render VERBATIM in Part 2 (monospaced, legible):
+<script src="https://app.maitre.ai/widget.js" data-restaurant="r_8fa2" data-color="#E8843C" data-name="Concierge" async></script>
+
+
+==================== PART 1  (0–10s) — paste this first ====================
+
+A calm, premium 10-second screen-recording demo for "Maitre," an AI concierge
+for restaurant websites. SLOW, deliberate pace; no people; clean macOS cursor;
+gentle zoom-in on each click; soft whoosh transitions; warm minimal music.
+CRITICAL: all on-screen text must be real, correct, clearly legible English —
+no gibberish or placeholder text. Match the attached screenshots for UI.
+
+Scene 1 (0–3s): The Maitre landing page — logo "Maitre", headline "The AI
+concierge your restaurant deserves." The cursor moves slowly to a rounded
+"Get started" button and clicks; gentle zoom-in on the click. Soft whoosh.
+
+Scene 2 (3–6.5s): A "Create your account" screen. The form is already filled in,
+shown clearly and legibly:
+   First name: Elena
+   Last name: Rossi
+   Email: elena@trattoriaroma.com
+   Password: ••••••••
+The cursor moves slowly to a purple-to-orange "Continue with Google" button and
+clicks; gentle zoom-in. Soft whoosh.
+
+Scene 3 (6.5–10s): A "Restaurant Information" form. Move SLOWLY here and linger.
+Show EXACTLY these fields, neatly filled in and legible, each with a small icon:
+   Restaurant Name: Trattoria Roma
+   Website URL: trattoriaroma.com
+   Phone Number: (415) 555-0142
+   Address: 214 Columbus Ave, San Francisco
+   Email: hello@trattoriaroma.com
+There is NO password field and NO menu upload on this screen. A single rounded
+primary button reads "Continue". The cursor slowly clicks "Continue".
+End on this screen.
+
+
+==================== PART 2  (10–20s) — paste this AFTER Part 1 ====================
+
+Continue the same calm, premium 10-second screen-recording demo for "Maitre."
+SLOW, deliberate pace; no people; clean macOS cursor; gentle zoom on clicks;
+soft whoosh transitions; warm minimal music. CRITICAL: all on-screen text must
+be real, correct, clearly legible English — no gibberish. Match the screenshots.
+
+Scene 4 (0–3s): A "Menu" screen with a single dashed upload box labeled
+"Upload menu PDF". A red PDF file icon glides into the box; then a small green
+toast slides in reading exactly "Indexed for AI ✓". Calm and slow.
+
+Scene 5 (3–6.5s): A dashboard "Widget Installation" card. The cursor slowly
+clicks a "Copy snippet" button; a small "Copied ✓" appears. Soft whoosh into a
+Wix "Custom Code" settings field, where this exact snippet types out slowly in a
+monospaced font, rendered legibly and character-for-character:
+<script src="https://app.maitre.ai/widget.js" data-restaurant="r_8fa2" data-color="#E8843C" data-name="Concierge" async></script>
+Then the cursor presses Enter; a soft confirmation glow.
+
+Scene 6 (6.5–10s): A restaurant website with a floating brand-colored chat
+bubble in the bottom-right. The cursor clicks it; gentle zoom-in; a polished
+chat window opens with an avatar and a green "Online" dot. A guest message
+appears: "Do you have vegan options?" Three typing dots animate, then a warm
+reply types out, clearly and legibly: "We do! 🌿 Our roasted-beet risotto and
+charred cauliflower are guest favorites — want me to hold you a table?"
+End on a clean card with the Maitre logo and the tagline
+"Your AI concierge, live in minutes."
+Make the final frame match a Maitre landing-page look so the full video loops
+seamlessly with a smooth crossfade.
+
+
+--------------------------------------------------
+NOTES
+--------------------------------------------------
+• Generate PART 1, then PART 2, then stitch them (CapCut/iMovie) into one 20s clip.
+• AI video still struggles with tiny text/code. If the snippet or chat text
+  comes out wrong, screen-record those two moments from the real app and drop
+  them in — everything else can stay AI-generated.
+• Removed the confusing "Menu & Dietary / Add upload drop zone" scene entirely.
