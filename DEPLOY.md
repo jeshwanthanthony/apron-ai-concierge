@@ -21,7 +21,7 @@ Nothing to buy — you'll just attach it to the deployment in §2.
 
 The app builds on TanStack Start + Nitro, targeting **Cloudflare Workers**
 (`nitro: { preset: "cloudflare-module" }` in `vite.config.ts`). `npm run build`
-emits a deployable Worker in `dist/` with a generated wrangler config.
+emits a deployable Worker in `.output/` with a generated wrangler config.
 
 ### Route A — deploy from the terminal with Wrangler (recommended)
 
@@ -31,7 +31,7 @@ route — there's no Git connection.
 
 ```bash
 npm install
-npm run build                 # → dist/ (Cloudflare Worker + wrangler config)
+npm run build                 # → .output/ (Cloudflare Worker + wrangler.json)
 npm i -g wrangler
 wrangler login                # opens browser; approve
 npx wrangler deploy           # run from repo root; Nitro wrote the wrangler config
@@ -53,13 +53,13 @@ DNS/SSL).
 1. Cloudflare Dashboard → **Workers & Pages** → **Create** → **Connect to Git**.
 2. Pick `apron-ai-concierge`, branch `main` (merge the PR first).
    - Build command: `npm run build`
-   - Deploy command / output: Wrangler config in `dist/` (Nitro generates it).
+   - Deploy command / output: Wrangler config at `.output/server/wrangler.json` (Nitro generates it).
 3. Add env vars (§5), deploy, then attach **hirematrie.com** under Settings →
    Domains. Making the repo private later is fine — the Cloudflare GitHub App
    keeps access.
 
 > Prefer a Cloudflare **Pages** project instead of Workers? Build with
-> `NITRO_PRESET=cloudflare-pages npm run build` and point Pages at `dist/`.
+> `NITRO_PRESET=cloudflare-pages npm run build` and point Pages at `.output/public/`.
 
 ---
 
