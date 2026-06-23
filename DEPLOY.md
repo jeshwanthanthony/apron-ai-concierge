@@ -19,23 +19,47 @@ Nothing to buy — you'll just attach it to the deployment in §2.
 
 ## 2. Deploy to Cloudflare (one-time setup, then auto-deploys)
 
-The app builds on TanStack Start + Nitro, whose **default target is Cloudflare**,
-so this is the native host. Easiest path = connect the GitHub repo so every push
-deploys automatically (always-on, global edge = fast everywhere).
+The app builds on TanStack Start + Nitro, targeting **Cloudflare Workers**
+(`nitro: { preset: "cloudflare-module" }` in `vite.config.ts`). `npm run build`
+emits a deployable Worker in `dist/` with a generated wrangler config.
+
+### Route A — deploy from the terminal with Wrangler (recommended)
+
+Best for the first launch: you (with Claude in the terminal) can see the real
+build output and fix anything live. The repo's privacy doesn't matter with this
+route — there's no Git connection.
+
+```bash
+npm install
+npm run build                 # → dist/ (Cloudflare Worker + wrangler config)
+npm i -g wrangler
+wrangler login                # opens browser; approve
+npx wrangler deploy           # run from repo root; Nitro wrote the wrangler config
+```
+
+You'll get a `*.workers.dev` URL to test. Then add env vars (§5) as secrets:
+
+```bash
+wrangler secret put OPENAI_API_KEY
+# set PUBLIC_APP_URL=https://hirematrie.com (var, not secret)
+```
+
+Finally, attach the domain: Cloudflare Dashboard → your Worker → **Settings →
+Domains & Routes** → add **hirematrie.com** and `www.hirematrie.com` (auto
+DNS/SSL).
+
+### Route B — connect the GitHub repo (auto-deploy on push)
 
 1. Cloudflare Dashboard → **Workers & Pages** → **Create** → **Connect to Git**.
-2. Pick the `apron-ai-concierge` repo, branch `main` (merge your feature branch
-   first), framework preset **Vite**.
+2. Pick `apron-ai-concierge`, branch `main` (merge the PR first).
    - Build command: `npm run build`
-   - Build output: `dist` (Nitro emits the Cloudflare worker/assets here)
-3. Add the environment variables (Settings → Variables & Secrets) — see §5.
-4. Deploy. You'll get a `*.workers.dev` URL to test immediately.
-5. **Custom domain:** Settings → Domains & Routes → add **hirematrie.com** (and
-   `www.hirematrie.com`). Cloudflare wires DNS + SSL automatically.
+   - Deploy command / output: Wrangler config in `dist/` (Nitro generates it).
+3. Add env vars (§5), deploy, then attach **hirematrie.com** under Settings →
+   Domains. Making the repo private later is fine — the Cloudflare GitHub App
+   keeps access.
 
-> If the build needs a Nitro preset nudge, set the build env var
-> `NITRO_PRESET=cloudflare_pages` (or `cloudflare_module`). Start without it; only
-> add it if the deploy log asks for a preset.
+> Prefer a Cloudflare **Pages** project instead of Workers? Build with
+> `NITRO_PRESET=cloudflare-pages npm run build` and point Pages at `dist/`.
 
 ---
 
