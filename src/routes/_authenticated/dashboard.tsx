@@ -53,16 +53,6 @@ function Dashboard() {
   const signOut = async () => { await supabase.auth.signOut(); navigate({ to: "/" }); };
   const patch = (fields: Record<string, any>) => setR((cur) => ({ ...(cur || {}), ...fields }));
 
-  // Keep the usage meter live as the owner tests their own concierge.
-  const registerUsage = (limited: boolean) => setR((cur) => {
-    if (!cur) return cur;
-    const limit = Number(cur.free_message_limit ?? 2);
-    const used = limited
-      ? Math.max(Number(cur.messages_used ?? 0), limit)
-      : Number(cur.messages_used ?? 0) + 1;
-    return { ...cur, messages_used: used };
-  });
-
   return (
     <div className="min-h-screen bg-white text-zinc-900">
       <header className="sticky top-0 z-40 border-b border-zinc-200 bg-white/90 px-6 py-4 backdrop-blur sm:px-10">
@@ -100,7 +90,7 @@ function Dashboard() {
 
             <section id="concierge" className="scroll-mt-24 space-y-6">
               <AppearanceCard r={r} onSaved={patch} />
-              <ConciergeTester r={r} onUsage={registerUsage} />
+              <ConciergeTester r={r} />
             </section>
 
             <section id="menu" className="scroll-mt-24 space-y-6">
@@ -464,7 +454,7 @@ function AppearanceCard({ r, onSaved }: { r: any; onSaved: (fields: Record<strin
 
 type Msg = { role: "user" | "assistant"; content: string };
 
-function ConciergeTester({ r, onUsage }: { r: any; onUsage?: (limited: boolean) => void }) {
+function ConciergeTester({ r }: { r: any }) {
   const accent = r.brand_color || "#7c3aed";
   const name = r.concierge_name || "Maître AI";
   const welcome = r.welcome_message || "Hi there! 👋 How can I help you today?";
@@ -473,7 +463,6 @@ function ConciergeTester({ r, onUsage }: { r: any; onUsage?: (limited: boolean) 
   const [messages, setMessages] = useState<Msg[]>([{ role: "assistant", content: welcome }]);
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
-  const [limited, setLimited] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -491,16 +480,11 @@ function ConciergeTester({ r, onUsage }: { r: any; onUsage?: (limited: boolean) 
       const res = await fetch("/api/concierge", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ restaurantId: r.id, question: q, history }),
+        body: JSON.stringify({ restaurantId: r.id, question: q, history, source: "preview" }),
       });
       const data = await res.json().catch(() => ({}));
       const reply = res.ok && data.answer ? data.answer : data.error || "Something went wrong.";
       setMessages((m) => [...m, { role: "assistant", content: reply }]);
-      if (res.ok) {
-        const isLimited = !!data.limited;
-        setLimited(isLimited);
-        onUsage?.(isLimited);
-      }
     } catch {
       setMessages((m) => [...m, { role: "assistant", content: "Couldn't reach the concierge. Is the dev server running?" }]);
     } finally {
@@ -508,8 +492,7 @@ function ConciergeTester({ r, onUsage }: { r: any; onUsage?: (limited: boolean) 
     }
   };
 
-  const reset = () => { setMessages([{ role: "assistant", content: welcome }]); setLimited(false); };
-  const goToUsage = () => document.getElementById("usage")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  const reset = () => setMessages([{ role: "assistant", content: welcome }]);
   const initial = (name.charAt(0) || "C").toUpperCase();
 
   return (
@@ -583,18 +566,7 @@ function ConciergeTester({ r, onUsage }: { r: any; onUsage?: (limited: boolean) 
           </div>
         )}
 
-        {/* Upgrade nudge when the trial is used up */}
-        {limited && (
-          <div className="flex items-center justify-between gap-3 border-t border-amber-100 bg-amber-50 px-5 py-3">
-            <div className="flex items-center gap-2 text-sm text-amber-800">
-              <Zap className="h-4 w-4 shrink-0" />
-              <span>You've hit the free trial limit. Upgrade to keep answering guests.</span>
-            </div>
-            <button onClick={goToUsage} className="shrink-0 rounded-full bg-zinc-900 px-3 py-1.5 text-xs font-semibold text-white hover:bg-zinc-800">
-              View plans
-            </button>
-          </div>
-        )}
+        {/* Note: dashboard tests are always free — they never count toward usage. */}
 
         {/* Composer */}
         <form onSubmit={(e) => { e.preventDefault(); ask(); }} className="flex items-center gap-2 border-t border-zinc-200 bg-white px-3 py-3">
@@ -986,30 +958,42 @@ const PLAN_META: Record<PlanId, { name: string; badge: string }> = {
 // unlimited for a typical independent restaurant).
 const PRO_INCLUDED = 1500;
 
+type Usage = { plan: string; used: number; limit: number; used_today: number; daily_limit: number; allowed: boolean; reason: string | null };
+
 function PlanUsageCard({ r, onSaved }: { r: any; onSaved: (fields: Record<string, any>) => void }) {
+  const [usage, setUsage] = useState<Usage | null>(null);
+  const [showUpgrade, setShowUpgrade] = useState(false);
+  const [busy, setBusy] = useState(false);
+
+  const loadUsage = async () => {
+    const { data } = await supabase.rpc("get_usage", { p_restaurant_id: r.id });
+    if (data) setUsage(data as unknown as Usage);
+  };
+  useEffect(() => { loadUsage(); /* eslint-disable-next-line */ }, [r.id]);
+
   const plan: PlanId = (["free", "pro_monthly", "pro_annual"].includes(r.plan) ? r.plan : "free") as PlanId;
-  const used = Number(r.messages_used ?? 0);
-  const freeLimit = Number(r.free_message_limit ?? 2);
   const isFree = plan === "free";
+  const used = usage?.used ?? Number(r.messages_used ?? 0);
+  const freeLimit = usage?.limit ?? Number(r.free_message_limit ?? 20);
+  const usedToday = usage?.used_today ?? 0;
+  const dailyLimit = usage?.daily_limit ?? Number(r.daily_free_limit ?? 12);
   const limit = isFree ? freeLimit : PRO_INCLUDED;
   const pct = Math.min(100, Math.round((used / Math.max(1, limit)) * 100));
   const remaining = Math.max(0, limit - used);
-  const out = isFree && used >= freeLimit;
-
-  const [showUpgrade, setShowUpgrade] = useState(false);
-  const [busy, setBusy] = useState(false);
+  const out = isFree && usage ? usage.allowed === false : false;
+  const dailyReached = isFree && usage?.reason === "daily";
 
   const meterColor = out ? "#dc2626" : pct > 75 ? "#ea580c" : isFree ? "#006aff" : "#16a34a";
 
   const subscribe = async (target: PlanId) => {
     setBusy(true);
-    const { data, error } = await supabase.rpc("set_plan", { p_restaurant_id: r.id, p_plan: target });
+    const { error } = await supabase.rpc("set_plan", { p_restaurant_id: r.id, p_plan: target });
     setBusy(false);
     if (error) { toast.error(error.message); return; }
     onSaved({ plan: target });
     setShowUpgrade(false);
+    loadUsage();
     toast.success(`You're on ${PLAN_META[target].name} 🎉 (demo — no real charge)`);
-    void data;
   };
 
   const resetDemo = async () => {
@@ -1018,14 +1002,15 @@ function PlanUsageCard({ r, onSaved }: { r: any; onSaved: (fields: Record<string
     setBusy(false);
     if (error) { toast.error(error.message); return; }
     onSaved({ plan: "free", messages_used: 0 });
-    toast.success("Demo usage reset — you're back on the free trial.");
+    loadUsage();
+    toast.success("Demo usage reset — you're back on the free plan.");
   };
 
   return (
     <Card title="Plan & Usage">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="text-sm text-zinc-500">
-          Track how many AI messages your concierge has answered and manage your plan.
+          Track how many AI messages your concierge has answered guests and manage your plan.
         </p>
         <span className={cn("inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold", PLAN_META[plan].badge)}>
           {plan === "free" ? <Zap className="h-3 w-3" /> : <Crown className="h-3 w-3" />}
@@ -1039,15 +1024,15 @@ function PlanUsageCard({ r, onSaved }: { r: any; onSaved: (fields: Record<string
           <div>
             <div className="text-3xl font-semibold tracking-tight">
               {used.toLocaleString()}
-              <span className="text-lg font-medium text-zinc-400"> / {isFree ? limit.toLocaleString() : `${PRO_INCLUDED.toLocaleString()}`}</span>
+              <span className="text-lg font-medium text-zinc-400"> / {limit.toLocaleString()}</span>
             </div>
             <div className="mt-1 text-sm text-zinc-500">
-              {isFree ? "messages used this trial" : "messages this month"}
+              {isFree ? "free guest messages used" : "guest messages this month"}
             </div>
           </div>
           {isFree && (
             <div className={cn("text-right text-sm font-medium", out ? "text-red-600" : "text-zinc-500")}>
-              {out ? "Trial used up" : `${remaining} left`}
+              {out ? (dailyReached ? "Daily limit reached" : "Free messages used up") : `${remaining} left`}
             </div>
           )}
         </div>
@@ -1055,10 +1040,21 @@ function PlanUsageCard({ r, onSaved }: { r: any; onSaved: (fields: Record<string
           <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, background: meterColor }} />
         </div>
 
+        {isFree && (
+          <div className="mt-3 flex items-center justify-between text-xs text-zinc-500">
+            <span>Today: <span className="font-medium text-zinc-700">{usedToday}</span> / {dailyLimit} daily</span>
+            <span>Owner test chats are always free</span>
+          </div>
+        )}
+
         {out && (
           <div className="mt-4 flex items-start gap-2 rounded-xl border border-red-100 bg-red-50 p-3 text-sm text-red-700">
             <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
-            <span>Your free trial is used up. Upgrade to keep your concierge answering guests 24/7.</span>
+            <span>
+              {dailyReached
+                ? "You've hit today's free message cap. It resets tomorrow — or upgrade for unlimited guest messages."
+                : "Your free guest messages are used up. Upgrade to keep your concierge answering guests 24/7."}
+            </span>
           </div>
         )}
       </div>
@@ -1096,7 +1092,8 @@ const PLANS: Array<{
     price: "$19",
     cadence: "/month",
     features: [
-      "Up to 1,500 AI messages / month",
+      "Unlimited guest messages (fair use)",
+      "No daily caps",
       "Reads your menu PDF (RAG)",
       "Unlimited custom Q&A",
       "Live guest-question analytics",

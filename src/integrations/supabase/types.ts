@@ -139,6 +139,7 @@ export type Database = {
           concierge_name: string | null
           created_at: string
           cuisine_type: string | null
+          daily_free_limit: number
           daily_specials: string | null
           delivery_pickup: string | null
           dietary_gluten_free: boolean
@@ -188,6 +189,7 @@ export type Database = {
           concierge_name?: string | null
           created_at?: string
           cuisine_type?: string | null
+          daily_free_limit?: number
           daily_specials?: string | null
           delivery_pickup?: string | null
           dietary_gluten_free?: boolean
@@ -237,6 +239,7 @@ export type Database = {
           concierge_name?: string | null
           created_at?: string
           cuisine_type?: string | null
+          daily_free_limit?: number
           daily_specials?: string | null
           delivery_pickup?: string | null
           dietary_gluten_free?: boolean

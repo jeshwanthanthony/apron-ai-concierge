@@ -179,7 +179,7 @@ export const Route = createFileRoute("/api/concierge")({
       POST: async ({ request }) => {
         await ensureEnv();
 
-        let payload: { restaurantId?: string; question?: string; history?: HistoryItem[] };
+        let payload: { restaurantId?: string; question?: string; history?: HistoryItem[]; source?: string };
         try {
           payload = await request.json();
         } catch {
@@ -188,6 +188,10 @@ export const Route = createFileRoute("/api/concierge")({
 
         const restaurantId = (payload.restaurantId || "").trim();
         const question = (payload.question || "").trim();
+        // "preview" = the owner testing in their own dashboard. These are free:
+        // they never count toward the guest allowance and aren't logged as
+        // guest questions. Everything else is treated as a real guest message.
+        const isPreview = payload.source === "preview";
         const history = Array.isArray(payload.history)
           ? payload.history
               .filter((m) => m && (m.role === "user" || m.role === "assistant") && typeof m.content === "string")
@@ -210,21 +214,25 @@ export const Route = createFileRoute("/api/concierge")({
           return json({ error: "Unknown restaurant" }, 404);
         }
 
-        // Usage gate: free plans get a limited number of demo messages.
-        // When the allowance is spent, respond gracefully WITHOUT calling
+        // Usage gate (guest messages only — owner previews are always free).
+        // The free plan includes 20 lifetime guest messages plus a soft daily
+        // cap. When the allowance is spent we respond gracefully WITHOUT calling
         // OpenAI or logging (which would burn more usage).
-        const { data: usageData } = await supabase.rpc("get_usage", {
-          p_restaurant_id: restaurantId,
-        });
-        const usage = (usageData as { allowed?: boolean; plan?: string; used?: number; limit?: number } | null) ?? null;
-        if (usage && usage.allowed === false) {
-          return json({
-            answer:
-              `Thanks so much for stopping by! ${ctx.name}'s AI concierge has reached its demo ` +
-              `limit for now. Please reach out to the restaurant directly and they'll be ` +
-              `delighted to help. ✨`,
-            limited: true,
+        if (!isPreview) {
+          const { data: usageData } = await supabase.rpc("get_usage", {
+            p_restaurant_id: restaurantId,
           });
+          const usage = (usageData as { allowed?: boolean; reason?: string } | null) ?? null;
+          if (usage && usage.allowed === false) {
+            const answer =
+              usage.reason === "daily"
+                ? `Thanks for stopping by! ${ctx.name}'s AI concierge has answered all it can ` +
+                  `for today — please check back tomorrow, or reach out to the restaurant directly. ✨`
+                : `Thanks so much for stopping by! ${ctx.name}'s AI concierge has reached its free ` +
+                  `limit for now. Please reach out to the restaurant directly and they'll be ` +
+                  `delighted to help. ✨`;
+            return json({ answer, limited: true, reason: usage.reason ?? "trial" });
+          }
         }
 
         const apiKey = process.env.OPENAI_API_KEY;
@@ -281,16 +289,19 @@ export const Route = createFileRoute("/api/concierge")({
             "or contact the restaurant directly.";
         }
 
-        // Log the guest question + answer to the restaurant's history (best-effort).
-        const { error: logError } = await supabase.rpc("log_guest_question", {
-          p_restaurant_id: restaurantId,
-          p_question: question,
-          p_answer: answer,
-          p_source: "widget",
-        });
-        if (logError) console.error("[concierge] log error:", logError);
+        // Log the guest question + answer (which also increments usage).
+        // Owner previews are free and never logged.
+        if (!isPreview) {
+          const { error: logError } = await supabase.rpc("log_guest_question", {
+            p_restaurant_id: restaurantId,
+            p_question: question,
+            p_answer: answer,
+            p_source: "widget",
+          });
+          if (logError) console.error("[concierge] log error:", logError);
+        }
 
-        return json({ answer } satisfies { answer: string });
+        return json({ answer });
       },
     },
   },
