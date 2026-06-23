@@ -7,6 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { extractPdfText, ingestMenu } from "@/lib/pdf-client";
+import { BILLING_ENABLED } from "@/lib/flags";
 import {
   Utensils, FileText, Check, Sparkles, Copy, Pencil, LogOut, Loader2, AlertCircle,
   Plus, Trash2, Save, X, MessageSquare, RefreshCw, Upload, HelpCircle, Sparkle,
@@ -116,9 +117,11 @@ function Dashboard() {
               <HistorySection restaurantId={r.id} />
             </section>
 
-            <section id="usage" className="scroll-mt-24">
-              <PlanUsageCard r={r} onSaved={patch} />
-            </section>
+            {BILLING_ENABLED && (
+              <section id="usage" className="scroll-mt-24">
+                <PlanUsageCard r={r} onSaved={patch} />
+              </section>
+            )}
 
             <section id="install" className="scroll-mt-24">
               <WidgetInstallCard r={r} />
@@ -132,14 +135,17 @@ function Dashboard() {
 
 /* ------------------------- Sticky section navigation ------------------------ */
 
-const SECTIONS = [
+type Section = { id: string; label: string; icon: typeof Store };
+const ALL_SECTIONS: Section[] = [
   { id: "profile", label: "Restaurant Profile", icon: Store },
   { id: "concierge", label: "Chatbot & Preview", icon: Sparkles },
   { id: "menu", label: "Menu & Q&A", icon: FileText },
   { id: "history", label: "Guest Questions", icon: MessageSquare },
   { id: "usage", label: "Plan & Usage", icon: Zap },
   { id: "install", label: "Install Widget", icon: Code2 },
-] as const;
+];
+// "Plan & Usage" only appears once billing is enabled.
+const SECTIONS: Section[] = ALL_SECTIONS.filter((s) => s.id !== "usage" || BILLING_ENABLED);
 
 function SideNav() {
   const [active, setActive] = useState<string>(SECTIONS[0].id);

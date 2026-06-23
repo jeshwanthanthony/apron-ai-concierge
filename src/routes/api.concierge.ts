@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { ensureEnv, serverClient, embedTexts, toVectorLiteral } from "@/lib/concierge-rag";
+import { BILLING_ENABLED } from "@/lib/flags";
 
 /**
  * Public AI concierge endpoint used by the embeddable widget.
@@ -215,10 +216,11 @@ export const Route = createFileRoute("/api/concierge")({
         }
 
         // Usage gate (guest messages only — owner previews are always free).
+        // Disabled while billing is off (BILLING_ENABLED): everyone is unlimited.
         // The free plan includes 20 lifetime guest messages plus a soft daily
         // cap. When the allowance is spent we respond gracefully WITHOUT calling
         // OpenAI or logging (which would burn more usage).
-        if (!isPreview) {
+        if (BILLING_ENABLED && !isPreview) {
           const { data: usageData } = await supabase.rpc("get_usage", {
             p_restaurant_id: restaurantId,
           });
