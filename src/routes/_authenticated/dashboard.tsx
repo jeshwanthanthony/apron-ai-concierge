@@ -73,7 +73,7 @@ function Dashboard() {
       <header className="sticky top-0 z-40 border-b border-zinc-200 bg-white/90 px-6 py-4 backdrop-blur sm:px-10">
         <div className="mx-auto flex max-w-6xl items-center justify-between">
           <Link to="/dashboard" className="flex items-center gap-2">
-            <div className="grid h-8 w-8 place-items-center rounded-lg bg-zinc-900 text-white">
+            <div className="grid h-8 w-8 place-items-center rounded-lg bg-gradient-hero text-white">
               <Utensils className="h-3.5 w-3.5" />
             </div>
             <span className="text-base font-semibold tracking-tight">Maitre</span>
@@ -186,10 +186,10 @@ function SideNav() {
             onClick={() => go(s.id)}
             className={cn(
               "flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-[15px] transition",
-              on ? "bg-[#e8f1ff] font-semibold text-[#006aff]" : "font-medium text-zinc-500 hover:bg-zinc-50 hover:text-zinc-900",
+              on ? "bg-[#ffedd5] font-semibold text-[#c2410c]" : "font-medium text-zinc-500 hover:bg-zinc-50 hover:text-zinc-900",
             )}
           >
-            <s.icon className={cn("h-4 w-4 shrink-0", on ? "text-[#006aff]" : "text-zinc-400")} />
+            <s.icon className={cn("h-4 w-4 shrink-0", on ? "text-[#c2410c]" : "text-zinc-400")} />
             {s.label}
           </button>
         );
@@ -241,7 +241,7 @@ function ProfileCard({ r, onSaved }: { r: any; onSaved: (fields: Record<string, 
         <div className="mb-5 flex items-center justify-between gap-3">
           <p className="text-sm text-zinc-500">The core information your concierge uses to answer guests.</p>
           <div className="flex shrink-0 items-center gap-3">
-            <a href="/onboarding?edit=1" className="text-sm font-medium text-[#006aff] hover:underline">Hours, allergens &amp; more</a>
+            <a href="/onboarding?edit=1" className="text-sm font-medium text-[#c2410c] hover:underline">Hours, allergens &amp; more</a>
             <Button size="sm" variant="outline" onClick={startEdit} className="rounded-full border-zinc-200 bg-white text-zinc-700 hover:bg-zinc-50"><Pencil className="mr-1.5 h-3.5 w-3.5" /> Edit</Button>
           </div>
         </div>
@@ -453,7 +453,7 @@ function AppearanceCard({ r, onSaved }: { r: any; onSaved: (fields: Record<strin
             </div>
           </div>
 
-          <Button onClick={save} disabled={saving} className="rounded-full bg-zinc-900 text-white hover:bg-zinc-800">
+          <Button onClick={save} disabled={saving} className="rounded-full bg-gradient-hero text-white hover:opacity-90">
             {saving ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <Save className="mr-1.5 h-3.5 w-3.5" />} Save appearance
           </Button>
         </div>
@@ -579,7 +579,7 @@ function ConciergeTester({ r }: { r: any }) {
         {messages.length <= 1 && !busy && suggestions.length > 0 && (
           <div className="flex flex-wrap gap-1.5 border-t border-zinc-200 bg-white px-5 pt-3">
             {suggestions.map((s) => (
-              <button key={s} onClick={() => ask(s)} className="rounded-full border border-zinc-200 bg-white px-3 py-1.5 text-xs font-medium text-zinc-900 transition hover:bg-zinc-900 hover:text-white">
+              <button key={s} onClick={() => ask(s)} className="rounded-full border border-zinc-200 bg-white px-3 py-1.5 text-xs font-medium text-zinc-900 transition hover:bg-[#c2410c] hover:text-white">
                 {s}
               </button>
             ))}
@@ -702,7 +702,7 @@ function MenuCard({ r, onUpdated }: { r: any; onUpdated: (path: string) => void 
             <Sparkle className="h-3 w-3" /> Indexed for AI ({chunks} sections) — your concierge reads this menu.
           </p>
         ) : (
-          <p className="mt-2 flex items-center gap-1.5 text-xs text-[#006aff]">
+          <p className="mt-2 flex items-center gap-1.5 text-xs text-[#c2410c]">
             <AlertCircle className="h-3 w-3" /> Uploaded but not indexed yet. Click <strong>Replace</strong> and re-select your menu PDF to let the AI read it.
           </p>
         )
@@ -937,7 +937,7 @@ function HistorySection({ restaurantId }: { restaurantId: string }) {
                 <p className="min-w-0 text-sm">{f.question}</p>
                 <span className={cn(
                   "shrink-0 rounded-full px-2.5 py-0.5 text-xs font-semibold",
-                  f.count > 1 ? "bg-[#e8f1ff] text-[#006aff]" : "bg-zinc-100 text-zinc-500",
+                  f.count > 1 ? "bg-[#ffedd5] text-[#c2410c]" : "bg-zinc-100 text-zinc-500",
                 )}>
                   {f.count}× {f.count > 1 ? "asked" : ""}
                 </span>
@@ -952,7 +952,7 @@ function HistorySection({ restaurantId }: { restaurantId: string }) {
               <div className="flex flex-wrap gap-2">
                 {topics.map(([word, n]) => (
                   <span key={word} className="inline-flex items-center gap-1.5 rounded-full border border-zinc-200 bg-zinc-50 px-3 py-1.5 text-sm">
-                    {word} <span className="rounded-full bg-[#e8f1ff] px-1.5 text-xs font-semibold text-[#006aff]">{n}</span>
+                    {word} <span className="rounded-full bg-[#ffedd5] px-1.5 text-xs font-semibold text-[#c2410c]">{n}</span>
                   </span>
                 ))}
               </div>
@@ -970,7 +970,7 @@ type PlanId = "free" | "pro_monthly" | "pro_annual";
 
 const PLAN_META: Record<PlanId, { name: string; badge: string }> = {
   free: { name: "Free Trial", badge: "bg-zinc-100 text-zinc-600" },
-  pro_monthly: { name: "Pro · Monthly", badge: "bg-[#e8f1ff] text-[#006aff]" },
+  pro_monthly: { name: "Pro · Monthly", badge: "bg-[#ffedd5] text-[#c2410c]" },
   pro_annual: { name: "Pro · Annual", badge: "bg-emerald-50 text-emerald-600" },
 };
 
@@ -1003,7 +1003,7 @@ function PlanUsageCard({ r, onSaved }: { r: any; onSaved: (fields: Record<string
   const out = isFree && usage ? usage.allowed === false : false;
   const dailyReached = isFree && usage?.reason === "daily";
 
-  const meterColor = out ? "#dc2626" : pct > 75 ? "#ea580c" : isFree ? "#006aff" : "#16a34a";
+  const meterColor = out ? "#dc2626" : pct > 75 ? "#ea580c" : isFree ? "#c2410c" : "#16a34a";
 
   // Real billing: start a Stripe Checkout session and redirect to it.
   const subscribe = async (target: PlanId) => {
@@ -1115,7 +1115,7 @@ function PlanUsageCard({ r, onSaved }: { r: any; onSaved: (fields: Record<string
       {/* Actions */}
       <div className="mt-5 flex flex-wrap items-center gap-3">
         {plan === "free" ? (
-          <Button onClick={() => setShowUpgrade(true)} className="rounded-full bg-zinc-900 text-white hover:bg-zinc-800">
+          <Button onClick={() => setShowUpgrade(true)} className="rounded-full bg-gradient-hero text-white hover:opacity-90">
             <Crown className="mr-1.5 h-3.5 w-3.5" /> Upgrade plan
           </Button>
         ) : (
@@ -1193,11 +1193,11 @@ function UpgradeModal({
                 key={p.id}
                 className={cn(
                   "relative flex flex-col rounded-2xl border p-5",
-                  p.highlight ? "border-[#006aff] ring-1 ring-[#006aff]" : "border-zinc-200",
+                  p.highlight ? "border-[#c2410c] ring-1 ring-[#c2410c]" : "border-zinc-200",
                 )}
               >
                 {p.highlight && (
-                  <span className="absolute -top-2.5 left-5 rounded-full bg-[#006aff] px-2.5 py-0.5 text-[11px] font-semibold text-white">Best value</span>
+                  <span className="absolute -top-2.5 left-5 rounded-full bg-[#c2410c] px-2.5 py-0.5 text-[11px] font-semibold text-white">Best value</span>
                 )}
                 <div className="text-sm font-semibold text-zinc-900">{p.name}</div>
                 <div className="mt-2 flex items-baseline gap-1">
@@ -1208,7 +1208,7 @@ function UpgradeModal({
                 <ul className="mt-4 flex-1 space-y-2">
                   {p.features.map((f) => (
                     <li key={f} className="flex items-start gap-2 text-sm text-zinc-600">
-                      <Check className="mt-0.5 h-4 w-4 shrink-0 text-[#006aff]" /> {f}
+                      <Check className="mt-0.5 h-4 w-4 shrink-0 text-[#c2410c]" /> {f}
                     </li>
                   ))}
                 </ul>
@@ -1217,7 +1217,7 @@ function UpgradeModal({
                   disabled={busy || isCurrent}
                   className={cn(
                     "mt-5 w-full rounded-full",
-                    p.highlight ? "bg-[#006aff] text-white hover:bg-[#0057d6]" : "bg-zinc-900 text-white hover:bg-zinc-800",
+                    p.highlight ? "bg-[#c2410c] text-white hover:bg-[#9a3412]" : "bg-gradient-hero text-white hover:opacity-90",
                   )}
                 >
                   {busy ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : null}
@@ -1282,7 +1282,7 @@ function StatusCard({ title, status, label, icon, detail }: { title: string; sta
         <div className="flex min-w-0 items-center gap-2 text-sm font-medium text-zinc-500">{icon}{title}</div>
         <span className={cn(
           "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium",
-          status === "ready" ? "bg-emerald-50 text-emerald-600" : "bg-[#e8f1ff] text-[#006aff]",
+          status === "ready" ? "bg-emerald-50 text-emerald-600" : "bg-[#ffedd5] text-[#c2410c]",
         )}>
           {status === "ready" ? <Check className="h-3 w-3" /> : <AlertCircle className="h-3 w-3" />}
           {label}
