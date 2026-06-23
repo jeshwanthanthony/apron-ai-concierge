@@ -167,10 +167,13 @@ export type Database = {
           pet_policy: string | null
           phone: string | null
           plan: string
+          plan_status: string | null
           popular_dishes: string | null
           reservation_button_label: string | null
           reservation_link: string | null
           story: string | null
+          stripe_customer_id: string | null
+          stripe_subscription_id: string | null
           updated_at: string
           user_id: string
           website_url: string | null
@@ -217,10 +220,13 @@ export type Database = {
           pet_policy?: string | null
           phone?: string | null
           plan?: string
+          plan_status?: string | null
           popular_dishes?: string | null
           reservation_button_label?: string | null
           reservation_link?: string | null
           story?: string | null
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
           updated_at?: string
           user_id: string
           website_url?: string | null
@@ -267,10 +273,13 @@ export type Database = {
           pet_policy?: string | null
           phone?: string | null
           plan?: string
+          plan_status?: string | null
           popular_dishes?: string | null
           reservation_button_label?: string | null
           reservation_link?: string | null
           story?: string | null
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
           updated_at?: string
           user_id?: string
           website_url?: string | null

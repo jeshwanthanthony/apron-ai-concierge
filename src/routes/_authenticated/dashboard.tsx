@@ -48,6 +48,20 @@ function Dashboard() {
     })();
   }, [navigate]);
 
+  // Returning from Stripe Checkout.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("upgraded")) {
+      toast.success("Welcome to Pro! 🎉 Your plan is active.");
+    } else if (params.get("canceled")) {
+      toast.message("Checkout canceled — no charge was made.");
+    }
+    if (params.get("upgraded") || params.get("canceled")) {
+      window.history.replaceState({}, "", "/dashboard");
+    }
+  }, []);
+
   if (loading || !r) return <div className="grid min-h-screen place-items-center"><Loader2 className="h-6 w-6 animate-spin text-zinc-500" /></div>;
 
   const signOut = async () => { await supabase.auth.signOut(); navigate({ to: "/" }); };
@@ -985,15 +999,48 @@ function PlanUsageCard({ r, onSaved }: { r: any; onSaved: (fields: Record<string
 
   const meterColor = out ? "#dc2626" : pct > 75 ? "#ea580c" : isFree ? "#006aff" : "#16a34a";
 
+  // Real billing: start a Stripe Checkout session and redirect to it.
   const subscribe = async (target: PlanId) => {
+    if (target === "free") return;
     setBusy(true);
-    const { error } = await supabase.rpc("set_plan", { p_restaurant_id: r.id, p_plan: target });
-    setBusy(false);
-    if (error) { toast.error(error.message); return; }
-    onSaved({ plan: target });
-    setShowUpgrade(false);
-    loadUsage();
-    toast.success(`You're on ${PLAN_META[target].name} 🎉 (demo — no real charge)`);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      const res = await fetch("/api/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ plan: target }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.url) {
+        window.location.href = data.url; // → Stripe hosted checkout
+        return;
+      }
+      toast.error(data.error || "Couldn't start checkout. Please try again.");
+    } catch {
+      toast.error("Couldn't reach billing. Please try again.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  // Paying customers manage / cancel via the Stripe billing portal.
+  const manage = async () => {
+    setBusy(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch("/api/billing-portal", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${session?.access_token}` },
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.url) { window.location.href = data.url; return; }
+      toast.error(data.error || "Couldn't open billing portal.");
+    } catch {
+      toast.error("Couldn't reach billing. Please try again.");
+    } finally {
+      setBusy(false);
+    }
   };
 
   const resetDemo = async () => {
@@ -1066,13 +1113,15 @@ function PlanUsageCard({ r, onSaved }: { r: any; onSaved: (fields: Record<string
             <Crown className="mr-1.5 h-3.5 w-3.5" /> Upgrade plan
           </Button>
         ) : (
-          <Button onClick={() => setShowUpgrade(true)} variant="outline" className="rounded-full border-zinc-200 bg-white text-zinc-700 hover:bg-zinc-50">
+          <Button onClick={manage} disabled={busy} variant="outline" className="rounded-full border-zinc-200 bg-white text-zinc-700 hover:bg-zinc-50">
             <CreditCard className="mr-1.5 h-3.5 w-3.5" /> Manage plan
           </Button>
         )}
-        <button onClick={resetDemo} disabled={busy} className="inline-flex items-center gap-1.5 text-sm font-medium text-zinc-500 transition hover:text-zinc-900 disabled:opacity-50">
-          <RotateCcw className="h-3.5 w-3.5" /> Reset demo usage
-        </button>
+        {isFree && (
+          <button onClick={resetDemo} disabled={busy} className="inline-flex items-center gap-1.5 text-sm font-medium text-zinc-500 transition hover:text-zinc-900 disabled:opacity-50">
+            <RotateCcw className="h-3.5 w-3.5" /> Reset free usage
+          </button>
+        )}
       </div>
 
       {showUpgrade && (
@@ -1174,7 +1223,7 @@ function UpgradeModal({
         </div>
 
         <div className="border-t border-zinc-200 bg-zinc-50 px-6 py-3 text-center text-xs text-zinc-400">
-          Demo mode — selecting a plan won't charge you. Real billing comes later.
+          Secure checkout powered by Stripe. Cancel anytime from your dashboard.
         </div>
       </div>
     </div>
