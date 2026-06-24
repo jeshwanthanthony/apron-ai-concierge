@@ -606,24 +606,31 @@ function ConciergeTester({ r }: { r: any }) {
         {/* Note: dashboard tests are always free — they never count toward usage. */}
 
         {/* Composer */}
-        <form onSubmit={(e) => { e.preventDefault(); ask(); }} className="flex items-center gap-2 border-t border-zinc-200 bg-white px-3 py-3">
-          <input
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            placeholder="Ask about reservations, menu, hours…"
-            disabled={busy}
-            maxLength={GUEST_INPUT_MAX}
-            className="flex-1 rounded-full border border-zinc-200 bg-zinc-50 px-4 py-2.5 text-sm outline-none transition placeholder:text-zinc-500 focus:bg-white"
-          />
-          <button
-            type="submit"
-            disabled={busy || !input.trim()}
-            className="grid h-9 w-9 shrink-0 place-items-center rounded-full text-white transition disabled:cursor-not-allowed disabled:opacity-40"
-            style={{ background: accent }}
-            aria-label="Send"
-          >
-            {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
-          </button>
+        <form onSubmit={(e) => { e.preventDefault(); ask(); }} className="border-t border-zinc-200 bg-white px-3 py-3">
+          {input.length > GUEST_INPUT_MAX - 80 && (
+            <div className="px-1 pb-1.5 text-right text-[11px] text-zinc-400">
+              {GUEST_INPUT_MAX - input.length} characters left
+            </div>
+          )}
+          <div className="flex items-center gap-2">
+            <input
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              placeholder="Ask about reservations, menu, hours…"
+              disabled={busy}
+              maxLength={GUEST_INPUT_MAX}
+              className="flex-1 rounded-full border border-zinc-200 bg-zinc-50 px-4 py-2.5 text-sm outline-none transition placeholder:text-zinc-500 focus:bg-white"
+            />
+            <button
+              type="submit"
+              disabled={busy || !input.trim()}
+              className="grid h-9 w-9 shrink-0 place-items-center rounded-full text-white transition disabled:cursor-not-allowed disabled:opacity-40"
+              style={{ background: accent }}
+              aria-label="Send"
+            >
+              {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
+            </button>
+          </div>
         </form>
       </div>
     </Card>
@@ -1285,30 +1292,37 @@ function WidgetInstallCard({ r }: { r: any }) {
 function UsageRing({ used, limit }: { used: number; limit: number }) {
   const safeLimit = Math.max(1, limit);
   const pct = Math.min(100, (used / safeLimit) * 100);
-  const radius = 9;
+  const radius = 13;
   const circ = 2 * Math.PI * radius;
   const offset = circ - (pct / 100) * circ;
   const over = used >= limit;
   const color = over ? "#dc2626" : pct > 80 ? "#ea580c" : "#c2410c";
   return (
-    <div className="flex items-center gap-2" title={`${used} of ${limit} guest messages used this month (Beta)`}>
-      <svg width="26" height="26" viewBox="0 0 26 26" className="-rotate-90">
-        <circle cx="13" cy="13" r={radius} fill="none" stroke="#eee" strokeWidth="3" />
+    <div
+      className="flex items-center gap-2.5"
+      title={`${used} of ${limit} guest messages used this month (Beta)`}
+    >
+      <svg width="34" height="34" viewBox="0 0 34 34" className="-rotate-90">
+        <circle cx="17" cy="17" r={radius} fill="none" stroke="#eee" strokeWidth="3.5" />
         <circle
-          cx="13"
-          cy="13"
+          cx="17"
+          cy="17"
           r={radius}
           fill="none"
           stroke={color}
-          strokeWidth="3"
+          strokeWidth="3.5"
           strokeDasharray={circ}
           strokeDashoffset={offset}
           strokeLinecap="round"
         />
       </svg>
-      <span className="text-xs font-medium tabular-nums text-zinc-500">
-        <span className={over ? "text-red-600" : "text-zinc-900"}>{used}</span>/{limit}
-      </span>
+      <div className="hidden leading-tight sm:block">
+        <div className="text-sm font-semibold tabular-nums">
+          <span className={over ? "text-red-600" : "text-zinc-900"}>{used}</span>
+          <span className="text-zinc-400">/{limit}</span>
+        </div>
+        <div className="text-[11px] text-zinc-500">messages this month</div>
+      </div>
     </div>
   );
 }
