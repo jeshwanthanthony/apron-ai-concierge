@@ -12,7 +12,7 @@ import {
   Utensils, FileText, Check, Sparkles, Copy, Pencil, LogOut, Loader2, AlertCircle,
   Plus, Trash2, Save, X, MessageSquare, RefreshCw, Upload, HelpCircle, Sparkle,
   Palette, Clock, TrendingUp, Hash, Send, RotateCcw, Store, Code2,
-  Image as ImageIcon, ArrowUpRight, Link2, Zap, CreditCard, Crown,
+  Image as ImageIcon, ArrowUpRight, Link2, Zap, CreditCard, Crown, Megaphone,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -30,10 +30,14 @@ const PRESET_COLORS = [
   "#ca8a04", "#ea580c", "#dc2626", "#db2777", "#0f172a",
 ];
 
+// Max characters a guest can type in one message (tester + live widget).
+const GUEST_INPUT_MAX = 300;
+
 function Dashboard() {
   const navigate = useNavigate();
   const [r, setR] = useState<Restaurant>(null);
   const [loading, setLoading] = useState(true);
+  const [usage, setUsage] = useState<{ used_month: number; month_limit: number } | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -46,6 +50,8 @@ function Dashboard() {
       }
       setR(data);
       setLoading(false);
+      const { data: u } = await supabase.rpc("get_usage", { p_restaurant_id: data.id });
+      if (u) setUsage(u as unknown as { used_month: number; month_limit: number });
     })();
   }, [navigate]);
 
@@ -77,10 +83,16 @@ function Dashboard() {
               <Utensils className="h-3.5 w-3.5" />
             </div>
             <span className="text-base font-semibold tracking-tight">Maitre</span>
+            <span className="rounded-full bg-[#ffedd5] px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-[#c2410c]">
+              Beta
+            </span>
           </Link>
-          <button onClick={signOut} className="flex items-center gap-1.5 text-sm font-medium text-zinc-500 transition hover:text-zinc-900">
-            <LogOut className="h-4 w-4" /> Sign out
-          </button>
+          <div className="flex items-center gap-4 sm:gap-5">
+            <UsageRing used={usage?.used_month ?? 0} limit={usage?.month_limit ?? 100} />
+            <button onClick={signOut} className="flex items-center gap-1.5 text-sm font-medium text-zinc-500 transition hover:text-zinc-900">
+              <LogOut className="h-4 w-4" /> <span className="hidden sm:inline">Sign out</span>
+            </button>
+          </div>
         </div>
       </header>
 
@@ -126,6 +138,10 @@ function Dashboard() {
             <section id="install" className="scroll-mt-24">
               <WidgetInstallCard r={r} />
             </section>
+
+            <section id="feedback" className="scroll-mt-24">
+              <FeedbackCard r={r} />
+            </section>
           </div>
         </div>
       </div>
@@ -143,6 +159,7 @@ const ALL_SECTIONS: Section[] = [
   { id: "history", label: "Guest Questions", icon: MessageSquare },
   { id: "usage", label: "Plan & Usage", icon: Zap },
   { id: "install", label: "Install Widget", icon: Code2 },
+  { id: "feedback", label: "Give Feedback", icon: Megaphone },
 ];
 // "Plan & Usage" only appears once billing is enabled.
 const SECTIONS: Section[] = ALL_SECTIONS.filter((s) => s.id !== "usage" || BILLING_ENABLED);
@@ -595,6 +612,7 @@ function ConciergeTester({ r }: { r: any }) {
             onChange={(e) => setInput(e.target.value)}
             placeholder="Ask about reservations, menu, hours…"
             disabled={busy}
+            maxLength={GUEST_INPUT_MAX}
             className="flex-1 rounded-full border border-zinc-200 bg-zinc-50 px-4 py-2.5 text-sm outline-none transition placeholder:text-zinc-500 focus:bg-white"
           />
           <button
@@ -1258,6 +1276,103 @@ function WidgetInstallCard({ r }: { r: any }) {
       <Button onClick={copy} variant="outline" className="mt-4 rounded-full">
         <Copy className="mr-1.5 h-3.5 w-3.5" /> Copy snippet
       </Button>
+    </Card>
+  );
+}
+
+/* ----------------------- Beta usage ring (header) ------------------------- */
+
+function UsageRing({ used, limit }: { used: number; limit: number }) {
+  const safeLimit = Math.max(1, limit);
+  const pct = Math.min(100, (used / safeLimit) * 100);
+  const radius = 9;
+  const circ = 2 * Math.PI * radius;
+  const offset = circ - (pct / 100) * circ;
+  const over = used >= limit;
+  const color = over ? "#dc2626" : pct > 80 ? "#ea580c" : "#c2410c";
+  return (
+    <div className="flex items-center gap-2" title={`${used} of ${limit} guest messages used this month (Beta)`}>
+      <svg width="26" height="26" viewBox="0 0 26 26" className="-rotate-90">
+        <circle cx="13" cy="13" r={radius} fill="none" stroke="#eee" strokeWidth="3" />
+        <circle
+          cx="13"
+          cy="13"
+          r={radius}
+          fill="none"
+          stroke={color}
+          strokeWidth="3"
+          strokeDasharray={circ}
+          strokeDashoffset={offset}
+          strokeLinecap="round"
+        />
+      </svg>
+      <span className="text-xs font-medium tabular-nums text-zinc-500">
+        <span className={over ? "text-red-600" : "text-zinc-900"}>{used}</span>/{limit}
+      </span>
+    </div>
+  );
+}
+
+/* --------------------------------- Feedback ------------------------------- */
+
+function FeedbackCard({ r }: { r: any }) {
+  const [subject, setSubject] = useState("");
+  const [message, setMessage] = useState("");
+  const [sending, setSending] = useState(false);
+
+  const submit = async () => {
+    if (!subject.trim() || !message.trim()) {
+      toast.error("Add a subject and a message");
+      return;
+    }
+    setSending(true);
+    const { data: { user } } = await supabase.auth.getUser();
+    const { error } = await supabase.from("feedback").insert({
+      restaurant_id: r.id,
+      user_id: user?.id ?? null,
+      email: user?.email ?? null,
+      subject: subject.trim().slice(0, 200),
+      message: message.trim().slice(0, 4000),
+    });
+    setSending(false);
+    if (error) { toast.error(error.message); return; }
+    setSubject("");
+    setMessage("");
+    toast.success("Thanks! Your feedback was sent. 🙏");
+  };
+
+  return (
+    <Card title="Give us feedback">
+      <p className="text-sm text-zinc-500">
+        Found a bug, want a feature, or have an idea? Send it straight to the team — we read every message.
+      </p>
+      <div className="mt-5 space-y-3">
+        <Field label="Subject">
+          <Input
+            className={inputCls}
+            placeholder="e.g. Add online ordering button"
+            value={subject}
+            maxLength={200}
+            onChange={(e) => setSubject(e.target.value)}
+          />
+        </Field>
+        <Field label="Message">
+          <Textarea
+            className="min-h-[120px] rounded-xl"
+            placeholder="Tell us what's on your mind…"
+            value={message}
+            maxLength={4000}
+            onChange={(e) => setMessage(e.target.value)}
+          />
+        </Field>
+        <div className="flex items-center justify-between">
+          <span className="text-xs text-zinc-400">{message.length}/4000</span>
+          <Button onClick={submit} disabled={sending} className="rounded-full bg-gradient-hero text-white hover:opacity-90">
+            {sending ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <Send className="mr-1.5 h-3.5 w-3.5" />}
+            Send feedback
+          </Button>
+        </div>
+      </div>
     </Card>
   );
 }

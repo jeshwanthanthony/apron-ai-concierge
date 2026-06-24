@@ -233,6 +233,7 @@
     var inputRow = el("div", "arc-input-row");
     var input = el("input", "arc-input");
     input.setAttribute("placeholder", "Ask about reservations, menu, hours…");
+    input.setAttribute("maxlength", "300");
     var send = el(
       "button",
       "arc-send",

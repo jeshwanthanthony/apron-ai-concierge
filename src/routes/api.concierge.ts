@@ -216,16 +216,31 @@ export const Route = createFileRoute("/api/concierge")({
         }
 
         // Usage gate (guest messages only — owner previews are always free).
-        // Disabled while billing is off (BILLING_ENABLED): everyone is unlimited.
-        // The free plan includes 20 lifetime guest messages plus a soft daily
-        // cap. When the allowance is spent we respond gracefully WITHOUT calling
-        // OpenAI or logging (which would burn more usage).
-        if (BILLING_ENABLED && !isPreview) {
+        // Beta: every restaurant gets 100 guest messages / month, always
+        // enforced. The paid/free-trial gate only runs when BILLING_ENABLED.
+        // When a limit is hit we reply gracefully WITHOUT calling OpenAI or
+        // logging (which would burn more usage).
+        if (!isPreview) {
           const { data: usageData } = await supabase.rpc("get_usage", {
             p_restaurant_id: restaurantId,
           });
-          const usage = (usageData as { allowed?: boolean; reason?: string } | null) ?? null;
-          if (usage && usage.allowed === false) {
+          const usage =
+            (usageData as { allowed?: boolean; reason?: string; beta_allowed?: boolean } | null) ?? null;
+
+          // Beta monthly cap (100/month) — always on.
+          if (usage && usage.beta_allowed === false) {
+            return json({
+              answer:
+                `Thanks for stopping by! ${ctx.name}'s AI concierge has reached its limit for ` +
+                `this month — please reach out to the restaurant directly and they'll be happy ` +
+                `to help. ✨`,
+              limited: true,
+              reason: "month",
+            });
+          }
+
+          // Paid / free-trial gate (only while billing is enabled).
+          if (BILLING_ENABLED && usage && usage.allowed === false) {
             const answer =
               usage.reason === "daily"
                 ? `Thanks for stopping by! ${ctx.name}'s AI concierge has answered all it can ` +

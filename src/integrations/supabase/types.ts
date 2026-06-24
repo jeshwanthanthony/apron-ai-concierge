@@ -14,6 +14,44 @@ export type Database = {
   }
   public: {
     Tables: {
+      feedback: {
+        Row: {
+          created_at: string
+          email: string | null
+          id: string
+          message: string
+          restaurant_id: string | null
+          subject: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          email?: string | null
+          id?: string
+          message: string
+          restaurant_id?: string | null
+          subject: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          email?: string | null
+          id?: string
+          message?: string
+          restaurant_id?: string | null
+          subject?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "feedback_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       menu_chunks: {
         Row: {
           chunk_index: number
@@ -158,6 +196,7 @@ export type Database = {
           menu_pdf_path: string | null
           menu_text: string | null
           messages_used: number
+          monthly_message_limit: number
           name: string | null
           onboarding_completed: boolean
           onboarding_step: number
@@ -211,6 +250,7 @@ export type Database = {
           menu_pdf_path?: string | null
           menu_text?: string | null
           messages_used?: number
+          monthly_message_limit?: number
           name?: string | null
           onboarding_completed?: boolean
           onboarding_step?: number
@@ -264,6 +304,7 @@ export type Database = {
           menu_pdf_path?: string | null
           menu_text?: string | null
           messages_used?: number
+          monthly_message_limit?: number
           name?: string | null
           onboarding_completed?: boolean
           onboarding_step?: number
@@ -297,10 +338,7 @@ export type Database = {
         Returns: Json
       }
       get_usage: { Args: { p_restaurant_id: string }; Returns: Json }
-      get_widget_config: {
-        Args: { p_restaurant_id: string }
-        Returns: Json
-      }
+      get_widget_config: { Args: { p_restaurant_id: string }; Returns: Json }
       log_guest_question: {
         Args: {
           p_answer: string
