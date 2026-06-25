@@ -123,7 +123,9 @@
       ".arc-input:focus{background:#fff;border-color:" + c + ";}" +
       ".arc-send{width:38px;height:38px;flex-shrink:0;background:" + c + ";color:#fff;border:none;border-radius:9999px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:opacity .15s;}" +
       ".arc-send:disabled{opacity:.4;cursor:not-allowed;}" +
-      ".arc-send svg{width:16px;height:16px;}";
+      ".arc-send svg{width:16px;height:16px;}" +
+      ".arc-count{margin-top:-6px;padding:0 16px 10px;text-align:right;font-size:11px;color:#a1a1aa;background:#fff;}" +
+      ".arc-count.full{color:#dc2626;font-weight:600;}";
 
     var existing = document.querySelector("style[data-arc]");
     if (existing) existing.remove();
@@ -242,12 +244,20 @@
     inputRow.appendChild(input);
     inputRow.appendChild(send);
 
+    // Visible character counter (tokens are costly — keep guest messages short).
+    var count = el("div", "arc-count", "0/300");
+    function updateCount() {
+      count.textContent = input.value.length + "/300";
+      count.className = "arc-count" + (input.value.length >= 300 ? " full" : "");
+    }
+
     var busy = false;
 
     function ask(text) {
       var v = (text != null ? text : input.value).trim();
       if (!v || busy) return;
       input.value = "";
+      updateCount();
       appendUser(body, v);
       chatHistory.push({ role: "user", content: v });
 
@@ -295,11 +305,13 @@
     input.addEventListener("keydown", function (e) {
       if (e.key === "Enter") ask();
     });
+    input.addEventListener("input", updateCount);
 
     win.appendChild(header);
     win.appendChild(body);
     win.appendChild(quick);
     win.appendChild(inputRow);
+    win.appendChild(count);
 
     var hasOpened = false;
     var greetDismissed = false;
