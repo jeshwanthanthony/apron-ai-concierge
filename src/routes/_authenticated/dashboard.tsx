@@ -608,7 +608,7 @@ function ConciergeTester({ r }: { r: any }) {
         {/* Composer */}
         <form onSubmit={(e) => { e.preventDefault(); ask(); }} className="border-t border-zinc-200 bg-white px-3 py-3">
           <div className="flex items-center justify-end px-1 pb-1.5">
-            <span className={cn("text-[11px] tabular-nums", input.length >= GUEST_INPUT_MAX ? "font-medium text-red-500" : "text-zinc-400")}>
+            <span className={cn("text-[11px] tabular-nums", input.length >= GUEST_INPUT_MAX ? "font-semibold text-red-500" : "font-medium text-zinc-600")}>
               {input.length}/{GUEST_INPUT_MAX}
             </span>
           </div>
@@ -1367,7 +1367,6 @@ function FeedbackCard({ r }: { r: any }) {
         <Field label="Subject">
           <Input
             className={inputCls}
-            placeholder="e.g. Add online ordering button"
             value={subject}
             maxLength={200}
             onChange={(e) => setSubject(e.target.value)}
