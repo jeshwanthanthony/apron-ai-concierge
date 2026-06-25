@@ -133,3 +133,38 @@
   .shadow-glow { box-shadow: var(--shadow-glow); }
   .shadow-elegant { box-shadow: var(--shadow-lg); }
 }
+
+/* International phone input (react-phone-number-input) — match our inputs. */
+.arc-phone {
+  height: 2.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0 0.75rem;
+  border: 1px solid var(--input);
+  border-radius: 0.75rem;
+  background: #fff;
+}
+.arc-phone:focus-within {
+  border-color: oklch(0.55 0.02 270);
+}
+.arc-phone .PhoneInputInput {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: 0.875rem;
+  color: var(--foreground);
+}
+.arc-phone .PhoneInputInput::placeholder {
+  color: var(--muted-foreground);
+}
+.arc-phone .PhoneInputCountry {
+  margin-right: 0.125rem;
+}
+.arc-phone .PhoneInputCountrySelectArrow {
+  color: var(--muted-foreground);
+  opacity: 0.7;
+}

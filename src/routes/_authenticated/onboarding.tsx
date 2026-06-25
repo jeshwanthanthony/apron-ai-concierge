@@ -10,6 +10,7 @@ import { ArrowLeft, ArrowRight, Check, Loader2, Sparkles, Upload, FileText, X, U
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { extractPdfText, ingestMenu } from "@/lib/pdf-client";
+import { PhoneField, AddressAutocomplete } from "@/components/form-fields";
 
 export const Route = createFileRoute("/_authenticated/onboarding")({
   component: Onboarding,
@@ -313,14 +314,14 @@ function Step1({ form, update }: { form: Form; update: Update }) {
       </div>
       <div className="sm:col-span-2">
         <Field label="Physical Address" required hint="Used for directions, delivery zones, and hours timezone.">
-          <Input className={inputCls} placeholder="214 Columbus Ave, San Francisco, CA 94133" value={form.address} onChange={(e) => update("address", e.target.value)} />
+          <AddressAutocomplete placeholder="Start typing your address…" value={form.address} onChange={(v) => update("address", v)} />
         </Field>
       </div>
       <Field label="Main Phone Number" required>
-        <Input className={inputCls} type="tel" placeholder="+1 (415) 555-0142" value={form.phone} onChange={(e) => update("phone", e.target.value)} />
+        <PhoneField placeholder="(415) 555-0142" value={form.phone} onChange={(v) => update("phone", v)} />
       </Field>
       <Field label="Manager / Emergency Contact" hint="Where the concierge routes urgent calls or escalations.">
-        <Input className={inputCls} type="tel" placeholder="+1 (415) 555-0199" value={form.emergency_contact} onChange={(e) => update("emergency_contact", e.target.value)} />
+        <PhoneField placeholder="(415) 555-0199" value={form.emergency_contact} onChange={(v) => update("emergency_contact", v)} />
       </Field>
       <Field label="Email"><Input className={inputCls} type="email" placeholder="hello@yoursite.com" value={form.email} onChange={(e) => update("email", e.target.value)} /></Field>
       <Field label="Website"><Input className={inputCls} placeholder="https://yoursite.com" value={form.website_url} onChange={(e) => update("website_url", e.target.value)} /></Field>

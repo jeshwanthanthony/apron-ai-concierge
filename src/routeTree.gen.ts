@@ -17,6 +17,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as ApiWidgetConfigRouteImport } from './routes/api.widget-config'
 import { Route as ApiStripeWebhookRouteImport } from './routes/api.stripe-webhook'
 import { Route as ApiIngestMenuRouteImport } from './routes/api.ingest-menu'
+import { Route as ApiGeocodeRouteImport } from './routes/api.geocode'
 import { Route as ApiConciergeRouteImport } from './routes/api.concierge'
 import { Route as ApiCheckoutRouteImport } from './routes/api.checkout'
 import { Route as ApiBillingPortalRouteImport } from './routes/api.billing-portal'
@@ -62,6 +63,11 @@ const ApiIngestMenuRoute = ApiIngestMenuRouteImport.update({
   path: '/api/ingest-menu',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiGeocodeRoute = ApiGeocodeRouteImport.update({
+  id: '/api/geocode',
+  path: '/api/geocode',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiConciergeRoute = ApiConciergeRouteImport.update({
   id: '/api/concierge',
   path: '/api/concierge',
@@ -98,6 +104,7 @@ export interface FileRoutesByFullPath {
   '/api/billing-portal': typeof ApiBillingPortalRoute
   '/api/checkout': typeof ApiCheckoutRoute
   '/api/concierge': typeof ApiConciergeRoute
+  '/api/geocode': typeof ApiGeocodeRoute
   '/api/ingest-menu': typeof ApiIngestMenuRoute
   '/api/stripe-webhook': typeof ApiStripeWebhookRoute
   '/api/widget-config': typeof ApiWidgetConfigRoute
@@ -112,6 +119,7 @@ export interface FileRoutesByTo {
   '/api/billing-portal': typeof ApiBillingPortalRoute
   '/api/checkout': typeof ApiCheckoutRoute
   '/api/concierge': typeof ApiConciergeRoute
+  '/api/geocode': typeof ApiGeocodeRoute
   '/api/ingest-menu': typeof ApiIngestMenuRoute
   '/api/stripe-webhook': typeof ApiStripeWebhookRoute
   '/api/widget-config': typeof ApiWidgetConfigRoute
@@ -128,6 +136,7 @@ export interface FileRoutesById {
   '/api/billing-portal': typeof ApiBillingPortalRoute
   '/api/checkout': typeof ApiCheckoutRoute
   '/api/concierge': typeof ApiConciergeRoute
+  '/api/geocode': typeof ApiGeocodeRoute
   '/api/ingest-menu': typeof ApiIngestMenuRoute
   '/api/stripe-webhook': typeof ApiStripeWebhookRoute
   '/api/widget-config': typeof ApiWidgetConfigRoute
@@ -144,6 +153,7 @@ export interface FileRouteTypes {
     | '/api/billing-portal'
     | '/api/checkout'
     | '/api/concierge'
+    | '/api/geocode'
     | '/api/ingest-menu'
     | '/api/stripe-webhook'
     | '/api/widget-config'
@@ -158,6 +168,7 @@ export interface FileRouteTypes {
     | '/api/billing-portal'
     | '/api/checkout'
     | '/api/concierge'
+    | '/api/geocode'
     | '/api/ingest-menu'
     | '/api/stripe-webhook'
     | '/api/widget-config'
@@ -173,6 +184,7 @@ export interface FileRouteTypes {
     | '/api/billing-portal'
     | '/api/checkout'
     | '/api/concierge'
+    | '/api/geocode'
     | '/api/ingest-menu'
     | '/api/stripe-webhook'
     | '/api/widget-config'
@@ -187,6 +199,7 @@ export interface RootRouteChildren {
   ApiBillingPortalRoute: typeof ApiBillingPortalRoute
   ApiCheckoutRoute: typeof ApiCheckoutRoute
   ApiConciergeRoute: typeof ApiConciergeRoute
+  ApiGeocodeRoute: typeof ApiGeocodeRoute
   ApiIngestMenuRoute: typeof ApiIngestMenuRoute
   ApiStripeWebhookRoute: typeof ApiStripeWebhookRoute
   ApiWidgetConfigRoute: typeof ApiWidgetConfigRoute
@@ -250,6 +263,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiIngestMenuRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/geocode': {
+      id: '/api/geocode'
+      path: '/api/geocode'
+      fullPath: '/api/geocode'
+      preLoaderRoute: typeof ApiGeocodeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/concierge': {
       id: '/api/concierge'
       path: '/api/concierge'
@@ -310,6 +330,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiBillingPortalRoute: ApiBillingPortalRoute,
   ApiCheckoutRoute: ApiCheckoutRoute,
   ApiConciergeRoute: ApiConciergeRoute,
+  ApiGeocodeRoute: ApiGeocodeRoute,
   ApiIngestMenuRoute: ApiIngestMenuRoute,
   ApiStripeWebhookRoute: ApiStripeWebhookRoute,
   ApiWidgetConfigRoute: ApiWidgetConfigRoute,
