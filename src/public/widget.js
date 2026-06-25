@@ -95,6 +95,7 @@
       ".arc-ava{position:relative;}" +
       ".arc-ava-dot{width:36px;height:36px;border-radius:9999px;background:" + c + ";display:flex;align-items:center;justify-content:center;color:#fff;}" +
       ".arc-ava-dot svg{width:16px;height:16px;}" +
+      ".arc-ava-img{width:36px;height:36px;border-radius:9999px;object-fit:cover;display:block;}" +
       ".arc-online{position:absolute;bottom:-1px;right:-1px;width:10px;height:10px;border-radius:9999px;background:#10b981;border:2px solid #fff;}" +
       ".arc-htext{flex:1;line-height:1.2;}" +
       ".arc-title{font-size:13px;font-weight:600;color:#18181b;}" +
@@ -187,9 +188,16 @@
 
     var header = el("div", "arc-header");
     var ava = el("div", "arc-ava");
-    ava.appendChild(
-      el("div", "arc-ava-dot", '<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l1.5 4.5L18 8l-4.5 1.5L12 14l-1.5-4.5L6 8l4.5-1.5z"/></svg>')
-    );
+    if (cfg.logo) {
+      var avaImg = el("img", "arc-ava-img");
+      avaImg.setAttribute("src", cfg.logo);
+      avaImg.setAttribute("alt", "");
+      ava.appendChild(avaImg);
+    } else {
+      ava.appendChild(
+        el("div", "arc-ava-dot", '<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l1.5 4.5L18 8l-4.5 1.5L12 14l-1.5-4.5L6 8l4.5-1.5z"/></svg>')
+      );
+    }
     ava.appendChild(el("span", "arc-online"));
     header.appendChild(ava);
     var htext = el("div", "arc-htext");
@@ -368,6 +376,7 @@
     if (!data || typeof data !== "object") return;
     if (data.brand_color) cfg.brandColor = data.brand_color;
     if (data.concierge_name) cfg.conciergeName = data.concierge_name;
+    if (data.logo_url) cfg.logo = data.logo_url;
     if (data.welcome_message) cfg.welcomeMessage = data.welcome_message;
     if (data.reservation_button_label) cfg.reservationLabel = data.reservation_button_label;
     if (data.order_button_label) cfg.orderLabel = data.order_button_label;
