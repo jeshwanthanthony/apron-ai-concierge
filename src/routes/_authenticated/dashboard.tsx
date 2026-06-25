@@ -87,19 +87,19 @@ function Dashboard() {
               Beta
             </span>
           </Link>
-          <div className="flex items-center gap-4 sm:gap-5">
-            <UsageRing used={usage?.used_month ?? 0} limit={usage?.month_limit ?? 100} />
-            <button onClick={signOut} className="flex items-center gap-1.5 text-sm font-medium text-zinc-500 transition hover:text-zinc-900">
-              <LogOut className="h-4 w-4" /> <span className="hidden sm:inline">Sign out</span>
-            </button>
-          </div>
+          <button onClick={signOut} className="flex items-center gap-1.5 text-sm font-medium text-zinc-500 transition hover:text-zinc-900">
+            <LogOut className="h-4 w-4" /> <span className="hidden sm:inline">Sign out</span>
+          </button>
         </div>
       </header>
 
       <div className="mx-auto max-w-6xl px-6 py-12 sm:px-10">
-        <div className="mb-10">
-          <h1 className="text-4xl font-semibold tracking-tight sm:text-5xl">{r.name || "Your restaurant"}</h1>
-          <p className="mt-2 text-lg text-zinc-500">{r.cuisine_type || "Welcome back"}</p>
+        <div className="mb-10 flex flex-wrap items-start justify-between gap-6">
+          <div>
+            <h1 className="text-4xl font-semibold tracking-tight sm:text-5xl">{r.name || "Your restaurant"}</h1>
+            <p className="mt-2 text-lg text-zinc-500">{r.cuisine_type || "Welcome back"}</p>
+          </div>
+          <UsageCard used={usage?.used_month ?? 0} limit={usage?.month_limit ?? 100} />
         </div>
 
         {/* Sticky section nav + content */}
@@ -607,11 +607,11 @@ function ConciergeTester({ r }: { r: any }) {
 
         {/* Composer */}
         <form onSubmit={(e) => { e.preventDefault(); ask(); }} className="border-t border-zinc-200 bg-white px-3 py-3">
-          {input.length > GUEST_INPUT_MAX - 80 && (
-            <div className="px-1 pb-1.5 text-right text-[11px] text-zinc-400">
-              {GUEST_INPUT_MAX - input.length} characters left
-            </div>
-          )}
+          <div className="flex items-center justify-end px-1 pb-1.5">
+            <span className={cn("text-[11px] tabular-nums", input.length >= GUEST_INPUT_MAX ? "font-medium text-red-500" : "text-zinc-400")}>
+              {input.length}/{GUEST_INPUT_MAX}
+            </span>
+          </div>
           <div className="flex items-center gap-2">
             <input
               value={input}
@@ -1289,39 +1289,42 @@ function WidgetInstallCard({ r }: { r: any }) {
 
 /* ----------------------- Beta usage ring (header) ------------------------- */
 
-function UsageRing({ used, limit }: { used: number; limit: number }) {
+function UsageCard({ used, limit }: { used: number; limit: number }) {
   const safeLimit = Math.max(1, limit);
   const pct = Math.min(100, (used / safeLimit) * 100);
-  const radius = 13;
+  const radius = 22;
   const circ = 2 * Math.PI * radius;
   const offset = circ - (pct / 100) * circ;
   const over = used >= limit;
   const color = over ? "#dc2626" : pct > 80 ? "#ea580c" : "#c2410c";
   return (
-    <div
-      className="flex items-center gap-2.5"
-      title={`${used} of ${limit} guest messages used this month (Beta)`}
-    >
-      <svg width="34" height="34" viewBox="0 0 34 34" className="-rotate-90">
-        <circle cx="17" cy="17" r={radius} fill="none" stroke="#eee" strokeWidth="3.5" />
-        <circle
-          cx="17"
-          cy="17"
-          r={radius}
-          fill="none"
-          stroke={color}
-          strokeWidth="3.5"
-          strokeDasharray={circ}
-          strokeDashoffset={offset}
-          strokeLinecap="round"
-        />
-      </svg>
-      <div className="hidden leading-tight sm:block">
-        <div className="text-sm font-semibold tabular-nums">
+    <div className="flex items-center gap-4 rounded-2xl border border-zinc-200 bg-white px-5 py-4 shadow-sm">
+      <div className="relative grid place-items-center">
+        <svg width="56" height="56" viewBox="0 0 56 56" className="-rotate-90">
+          <circle cx="28" cy="28" r={radius} fill="none" stroke="#f2f2f2" strokeWidth="5" />
+          <circle
+            cx="28"
+            cy="28"
+            r={radius}
+            fill="none"
+            stroke={color}
+            strokeWidth="5"
+            strokeDasharray={circ}
+            strokeDashoffset={offset}
+            strokeLinecap="round"
+          />
+        </svg>
+        <span className="absolute text-[11px] font-bold tabular-nums" style={{ color }}>
+          {Math.round(pct)}%
+        </span>
+      </div>
+      <div>
+        <div className="text-xl font-semibold leading-none tabular-nums">
           <span className={over ? "text-red-600" : "text-zinc-900"}>{used}</span>
-          <span className="text-zinc-400">/{limit}</span>
+          <span className="text-zinc-300">/{limit}</span>
         </div>
-        <div className="text-[11px] text-zinc-500">messages this month</div>
+        <div className="mt-1.5 text-xs font-medium text-zinc-600">guest messages this month</div>
+        <div className="mt-0.5 text-[11px] text-zinc-400">Beta limit · resets monthly</div>
       </div>
     </div>
   );
