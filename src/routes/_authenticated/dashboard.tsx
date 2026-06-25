@@ -35,6 +35,31 @@ const PRESET_COLORS = [
 // Max characters a guest can type in one message (tester + live widget).
 const GUEST_INPUT_MAX = 300;
 
+// Chat avatar logo shapes (border-radius applied to a square image/box).
+const LOGO_SHAPES: { id: string; label: string; radius: string }[] = [
+  { id: "circle", label: "Circle", radius: "50%" },
+  { id: "rounded", label: "Rounded", radius: "28%" },
+  { id: "squircle", label: "Squircle", radius: "40%" },
+];
+function shapeRadius(shape?: string) {
+  return LOGO_SHAPES.find((s) => s.id === shape)?.radius ?? "50%";
+}
+
+/** Chat avatar — the uploaded logo (in the chosen shape) or a fallback. */
+function BotAvatar({
+  logo, shape, accent, size, fallback,
+}: { logo?: string; shape?: string; accent: string; size: number; fallback: React.ReactNode }) {
+  const borderRadius = shapeRadius(shape);
+  if (logo) {
+    return <img src={logo} alt="" className="shrink-0 object-cover" style={{ width: size, height: size, borderRadius }} />;
+  }
+  return (
+    <div className="grid shrink-0 place-items-center text-white" style={{ width: size, height: size, borderRadius, background: accent }}>
+      {fallback}
+    </div>
+  );
+}
+
 function Dashboard() {
   const navigate = useNavigate();
   const [r, setR] = useState<Restaurant>(null);
@@ -482,6 +507,8 @@ function AppearanceCard({ r, onSaved }: { r: any; onSaved: (fields: Record<strin
     concierge_name: r.concierge_name ?? "Maître AI",
     brand_color: r.brand_color ?? "#7c3aed",
     welcome_message: r.welcome_message ?? "Hi there! 👋 How can I help you today?",
+    logo_url: r.logo_url ?? "",
+    logo_shape: r.logo_shape ?? "circle",
   });
   const [actions, setActions] = useState<ActionBtn[]>(() => {
     const a = r.action_buttons;
@@ -495,7 +522,20 @@ function AppearanceCard({ r, onSaved }: { r: any; onSaved: (fields: Record<strin
     ];
   });
   const [saving, setSaving] = useState(false);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
   const set = (k: keyof typeof form, v: string) => setForm((f) => ({ ...f, [k]: v }));
+
+  const uploadLogo = async (file: File) => {
+    setUploadingLogo(true);
+    const safe = file.name.replace(/[^a-zA-Z0-9.-]/g, "_");
+    const path = `${r.user_id}/logo-${Date.now()}-${safe}`;
+    const up = await supabase.storage.from("logos").upload(path, file, { upsert: true });
+    setUploadingLogo(false);
+    if (up.error) { toast.error(up.error.message); return; }
+    const { data } = supabase.storage.from("logos").getPublicUrl(path);
+    set("logo_url", data.publicUrl);
+    toast.success("Logo added");
+  };
 
   const setAction = (i: number, patch: Partial<ActionBtn>) =>
     setActions((a) => a.map((x, idx) => (idx === i ? { ...x, ...patch } : x)));
@@ -531,6 +571,45 @@ function AppearanceCard({ r, onSaved }: { r: any; onSaved: (fields: Record<strin
         {/* Controls */}
         <div className="space-y-5">
           <Field label="Concierge name"><Input className={inputCls} value={form.concierge_name} onChange={(e) => set("concierge_name", e.target.value)} /></Field>
+
+          <Field label="Chat logo">
+            <div className="flex items-center gap-4">
+              <BotAvatar logo={form.logo_url} shape={form.logo_shape} accent={form.brand_color} size={52} fallback={<Sparkles className="h-5 w-5" strokeWidth={1.5} />} />
+              <div className="space-y-2.5">
+                <div className="flex items-center gap-2">
+                  <label className={cn("inline-flex cursor-pointer items-center rounded-full border border-zinc-200 bg-white px-3 py-1.5 text-xs font-medium hover:bg-zinc-50", uploadingLogo && "pointer-events-none opacity-60")}>
+                    {uploadingLogo ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <Upload className="mr-1.5 h-3.5 w-3.5" />}
+                    {form.logo_url ? "Change logo" : "Upload logo"}
+                    <input type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadLogo(f); }} />
+                  </label>
+                  {form.logo_url && (
+                    <button onClick={() => set("logo_url", "")} className="rounded-full p-1.5 text-zinc-400 hover:bg-zinc-100 hover:text-zinc-900" aria-label="Remove logo">
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  )}
+                </div>
+                <div className="flex gap-1.5">
+                  {LOGO_SHAPES.map((sh) => {
+                    const on = form.logo_shape === sh.id;
+                    return (
+                      <button
+                        key={sh.id}
+                        type="button"
+                        onClick={() => set("logo_shape", sh.id)}
+                        className={cn("flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-[11px] font-medium transition",
+                          on ? "border-[#c2410c] bg-[#ffedd5] text-[#c2410c]" : "border-zinc-200 text-zinc-500 hover:bg-zinc-50")}
+                      >
+                        <span className="h-3.5 w-3.5 bg-current" style={{ borderRadius: sh.radius }} />
+                        {sh.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+            <p className="mt-2 text-[11px] text-zinc-400">Replaces the default sparkle/initial in the chat — shows in the tester and on your website.</p>
+          </Field>
+
           <Field label="Welcome message"><Textarea className="min-h-[72px] rounded-xl" value={form.welcome_message} onChange={(e) => set("welcome_message", e.target.value)} /></Field>
 
           <Field label="Brand color">
@@ -627,6 +706,8 @@ type Msg = { role: "user" | "assistant"; content: string };
 
 function ConciergeTester({ r }: { r: any }) {
   const accent = r.brand_color || "#7c3aed";
+  const logo = r.logo_url as string | undefined;
+  const shape = r.logo_shape as string | undefined;
   const name = r.concierge_name || "Maître AI";
   const welcome = r.welcome_message || "Hi there! 👋 How can I help you today?";
   const suggestions = [r.reservation_button_label, r.order_button_label, r.catering_button_label].filter(Boolean) as string[];
@@ -676,13 +757,7 @@ function ConciergeTester({ r }: { r: any }) {
         {/* Header */}
         <div className="flex items-center gap-3 border-b border-zinc-200 px-5 py-4">
           <div className="relative">
-            {r.logo_url ? (
-              <img src={r.logo_url} alt="" className="h-9 w-9 rounded-full object-cover" />
-            ) : (
-              <div className="grid h-9 w-9 place-items-center rounded-full text-white" style={{ background: accent }}>
-                <Sparkles className="h-3.5 w-3.5" strokeWidth={1.5} />
-              </div>
-            )}
+            <BotAvatar logo={logo} shape={shape} accent={accent} size={36} fallback={<Sparkles className="h-3.5 w-3.5" strokeWidth={1.5} />} />
             <span className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-emerald-500 ring-2 ring-card" />
           </div>
           <div className="flex-1 leading-tight">
@@ -708,7 +783,7 @@ function ConciergeTester({ r }: { r: any }) {
                 </div>
               ) : (
                 <div key={i} className="flex items-end gap-2">
-                  <div className="grid h-7 w-7 shrink-0 place-items-center rounded-full text-[10px] font-semibold text-white" style={{ background: accent }}>{initial}</div>
+                  <BotAvatar logo={logo} shape={shape} accent={accent} size={28} fallback={<span className="text-[10px] font-semibold">{initial}</span>} />
                   <div className="max-w-[85%] whitespace-pre-wrap rounded-2xl rounded-bl-md border border-zinc-200 bg-white px-3.5 py-2.5 text-sm leading-relaxed shadow-sm">
                     {m.content}
                   </div>
@@ -717,7 +792,7 @@ function ConciergeTester({ r }: { r: any }) {
             )}
             {busy && (
               <div className="flex items-end gap-2">
-                <div className="grid h-7 w-7 shrink-0 place-items-center rounded-full text-[10px] font-semibold text-white" style={{ background: accent }}>{initial}</div>
+                <BotAvatar logo={logo} shape={shape} accent={accent} size={28} fallback={<span className="text-[10px] font-semibold">{initial}</span>} />
                 <div className="rounded-2xl rounded-bl-md border border-zinc-200 bg-white px-3.5 py-3 shadow-sm">
                   <span className="flex items-center gap-1">
                     <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-zinc-300 [animation-delay:-0.3s]" />
@@ -1597,9 +1672,9 @@ function PreviewWidget({ r, actions }: { r: any; actions?: ActionBtn[] }) {
     <div className="overflow-hidden rounded-2xl border border-zinc-200 shadow-md">
       <div style={{ background: color }} className="flex items-center gap-3 p-4 text-white">
         {r.logo_url ? (
-          <img src={r.logo_url} alt="" className="h-9 w-9 rounded-full border border-white/30 object-cover" />
+          <img src={r.logo_url} alt="" className="h-9 w-9 border border-white/30 object-cover" style={{ borderRadius: shapeRadius(r.logo_shape) }} />
         ) : (
-          <div className="grid h-9 w-9 place-items-center rounded-full bg-white/20"><Sparkles className="h-4 w-4" /></div>
+          <div className="grid h-9 w-9 place-items-center bg-white/20" style={{ borderRadius: shapeRadius(r.logo_shape) }}><Sparkles className="h-4 w-4" /></div>
         )}
         <div>
           <div className="text-sm font-semibold">{r.concierge_name || "Maître AI"}</div>

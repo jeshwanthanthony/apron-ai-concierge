@@ -72,8 +72,22 @@
     return (String(cfg.conciergeName).charAt(0) || "C").toUpperCase();
   }
 
+  // Bot message avatar: the uploaded logo, or the concierge's initial.
+  function botAva() {
+    if (cfg.logo) {
+      var a = el("div", "arc-bava");
+      var img = el("img");
+      img.setAttribute("src", cfg.logo);
+      img.setAttribute("alt", "");
+      a.appendChild(img);
+      return a;
+    }
+    return el("div", "arc-bava", escapeHtml(initial()));
+  }
+
   function injectStyles() {
     var c = cfg.brandColor;
+    var rad = cfg.logoShape === "rounded" ? "28%" : cfg.logoShape === "squircle" ? "40%" : "9999px";
     var CSS =
       ".arc-root,.arc-root *{box-sizing:border-box;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;}" +
       ".arc-launch{position:fixed;bottom:24px;right:24px;z-index:2147483646;display:flex;flex-direction:column;align-items:flex-end;gap:12px;}" +
@@ -93,9 +107,9 @@
       ".arc-window.arc-open{display:flex;}" +
       ".arc-header{display:flex;align-items:center;gap:12px;padding:16px 18px;background:#fff;border-bottom:1px solid #f0f0f0;}" +
       ".arc-ava{position:relative;}" +
-      ".arc-ava-dot{width:36px;height:36px;border-radius:9999px;background:" + c + ";display:flex;align-items:center;justify-content:center;color:#fff;}" +
+      ".arc-ava-dot{width:36px;height:36px;border-radius:" + rad + ";background:" + c + ";display:flex;align-items:center;justify-content:center;color:#fff;}" +
       ".arc-ava-dot svg{width:16px;height:16px;}" +
-      ".arc-ava-img{width:36px;height:36px;border-radius:9999px;object-fit:cover;display:block;}" +
+      ".arc-ava-img{width:36px;height:36px;border-radius:" + rad + ";object-fit:cover;display:block;}" +
       ".arc-online{position:absolute;bottom:-1px;right:-1px;width:10px;height:10px;border-radius:9999px;background:#10b981;border:2px solid #fff;}" +
       ".arc-htext{flex:1;line-height:1.2;}" +
       ".arc-title{font-size:13px;font-weight:600;color:#18181b;}" +
@@ -105,7 +119,8 @@
       ".arc-body{flex:1;overflow-y:auto;padding:18px;background:#fafafa;display:flex;flex-direction:column;gap:12px;}" +
       ".arc-row{display:flex;align-items:flex-end;gap:8px;}" +
       ".arc-row.arc-u{justify-content:flex-end;}" +
-      ".arc-bava{width:26px;height:26px;border-radius:9999px;background:" + c + ";color:#fff;font-size:10px;font-weight:600;display:flex;align-items:center;justify-content:center;flex-shrink:0;}" +
+      ".arc-bava{width:26px;height:26px;border-radius:" + rad + ";background:" + c + ";color:#fff;font-size:10px;font-weight:600;display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden;}" +
+      ".arc-bava img{width:100%;height:100%;object-fit:cover;display:block;}" +
       ".arc-msg{max-width:84%;padding:10px 14px;font-size:13.5px;line-height:1.5;white-space:pre-wrap;box-shadow:0 1px 2px rgba(0,0,0,.04);}" +
       ".arc-msg.arc-bot{background:#fff;border:1px solid #ececef;color:#27272a;border-radius:16px;border-bottom-left-radius:5px;}" +
       ".arc-msg.arc-user{background:" + c + ";color:#fff;border-radius:16px;border-bottom-right-radius:5px;}" +
@@ -138,7 +153,7 @@
 
   function appendBot(body, text) {
     var row = el("div", "arc-row arc-b");
-    row.appendChild(el("div", "arc-bava", escapeHtml(initial())));
+    row.appendChild(botAva());
     row.appendChild(el("div", "arc-msg arc-bot", escapeHtml(text)));
     body.appendChild(row);
     body.scrollTop = body.scrollHeight;
@@ -272,7 +287,7 @@
       busy = true;
       send.setAttribute("disabled", "true");
       var typing = el("div", "arc-row arc-b");
-      typing.appendChild(el("div", "arc-bava", escapeHtml(initial())));
+      typing.appendChild(botAva());
       var tBubble = el("div", "arc-msg arc-bot arc-typing", "<span></span><span></span><span></span>");
       typing.appendChild(tBubble);
       body.appendChild(typing);
@@ -377,6 +392,7 @@
     if (data.brand_color) cfg.brandColor = data.brand_color;
     if (data.concierge_name) cfg.conciergeName = data.concierge_name;
     if (data.logo_url) cfg.logo = data.logo_url;
+    if (data.logo_shape) cfg.logoShape = data.logo_shape;
     if (data.welcome_message) cfg.welcomeMessage = data.welcome_message;
     if (data.reservation_button_label) cfg.reservationLabel = data.reservation_button_label;
     if (data.order_button_label) cfg.orderLabel = data.order_button_label;
