@@ -14,6 +14,7 @@ import {
   Plus, Trash2, Save, X, MessageSquare, RefreshCw, Upload, HelpCircle, Sparkle,
   Palette, Clock, TrendingUp, Hash, Send, RotateCcw, Store, Code2,
   Image as ImageIcon, ArrowUpRight, Link2, Zap, CreditCard, Crown, Megaphone,
+  Phone, Mail, Globe, MapPin,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -232,11 +233,13 @@ function ProfileCard({ r, onSaved }: { r: any; onSaved: (fields: Record<string, 
     const o: Record<string, any> = {};
     for (const f of PROFILE_FIELDS) o[f] = r[f] ?? "";
     for (const [k] of DIETARY) o[k] = !!r[k];
+    o.logo_url = r.logo_url ?? "";
     return o;
   };
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState<Record<string, any>>(seed);
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const set = (k: string, v: any) => setForm((f) => ({ ...f, [k]: v }));
 
   const startEdit = () => { setForm(seed()); setEditing(true); };
@@ -252,35 +255,58 @@ function ProfileCard({ r, onSaved }: { r: any; onSaved: (fields: Record<string, 
     toast.success("Profile saved");
   };
 
+  const uploadLogo = async (file: File) => {
+    setUploading(true);
+    const safe = file.name.replace(/[^a-zA-Z0-9.-]/g, "_");
+    const path = `${r.user_id}/logo-${Date.now()}-${safe}`;
+    const up = await supabase.storage.from("logos").upload(path, file, { upsert: true });
+    setUploading(false);
+    if (up.error) { toast.error(up.error.message); return; }
+    const { data } = supabase.storage.from("logos").getPublicUrl(path);
+    set("logo_url", data.publicUrl);
+    toast.success("Logo updated");
+  };
+
+  /* ----------------------------- Read view ----------------------------- */
   if (!editing) {
     const dietary = DIETARY.filter(([k]) => r[k]).map(([, l]) => l);
+    const subtitle = [r.cuisine_type, cityFromAddress(r.address)].filter(Boolean).join(" · ");
     return (
       <Card title="Restaurant Profile">
-        <div className="mb-5 flex items-center justify-between gap-3">
-          <p className="text-sm text-zinc-500">The core information your concierge uses to answer guests.</p>
+        {/* Identity header */}
+        <div className="flex flex-wrap items-center justify-between gap-4 border-b border-zinc-100 pb-6">
+          <div className="flex items-center gap-4">
+            <LogoAvatar url={r.logo_url} name={r.name} size={60} />
+            <div>
+              <div className="text-xl font-semibold tracking-tight">{r.name || "Your restaurant"}</div>
+              {subtitle && <div className="mt-0.5 text-sm text-zinc-500">{subtitle}</div>}
+            </div>
+          </div>
           <div className="flex shrink-0 items-center gap-3">
             <a href="/onboarding?edit=1" className="text-sm font-medium text-[#c2410c] hover:underline">Hours, allergens &amp; more</a>
-            <Button size="sm" variant="outline" onClick={startEdit} className="rounded-full border-zinc-200 bg-white text-zinc-700 hover:bg-zinc-50"><Pencil className="mr-1.5 h-3.5 w-3.5" /> Edit</Button>
+            <Button size="sm" variant="outline" onClick={startEdit} className="rounded-full border-zinc-200 bg-white text-zinc-700 hover:bg-zinc-50">
+              <Pencil className="mr-1.5 h-3.5 w-3.5" /> Edit
+            </Button>
           </div>
         </div>
-        <dl className="grid gap-x-8 gap-y-4 sm:grid-cols-2">
-          <Detail label="Name" value={r.name} />
-          <Detail label="Cuisine" value={r.cuisine_type} />
-          <Detail label="Website" value={r.website_url} />
-          <Detail label="Phone" value={r.phone} />
-          <Detail label="Email" value={r.email} />
-          <Detail label="Popular dishes" value={r.popular_dishes} />
-          <div className="sm:col-span-2"><Detail label="Address" value={r.address} /></div>
-          <div className="sm:col-span-2"><Detail label="Story" value={r.story} /></div>
-          <Detail label="Parking" value={r.parking_info} />
-          <Detail label="Delivery & pickup" value={r.delivery_pickup} />
-          <div className="sm:col-span-2"><Detail label="Allergy info" value={r.allergy_info} /></div>
+
+        {/* Details */}
+        <dl className="mt-6 grid gap-x-10 gap-y-5 sm:grid-cols-2">
+          <DetailRow icon={Phone} label="Phone" value={r.phone} />
+          <DetailRow icon={Mail} label="Email" value={r.email} />
+          <DetailRow icon={Globe} label="Website" value={r.website_url} />
+          <DetailRow icon={Utensils} label="Popular dishes" value={r.popular_dishes} />
+          <div className="sm:col-span-2"><DetailRow icon={MapPin} label="Address" value={r.address} /></div>
+          <div className="sm:col-span-2"><DetailRow label="Story" value={r.story} /></div>
+          <DetailRow label="Parking" value={r.parking_info} />
+          <DetailRow label="Delivery & pickup" value={r.delivery_pickup} />
+          <div className="sm:col-span-2"><DetailRow label="Allergy info" value={r.allergy_info} /></div>
           <div className="sm:col-span-2">
-            <dt className="text-xs uppercase tracking-wider text-zinc-500">Dietary</dt>
-            <dd className="mt-1.5 flex flex-wrap gap-1.5">
+            <dt className="text-xs font-medium uppercase tracking-wider text-zinc-400">Dietary</dt>
+            <dd className="mt-2 flex flex-wrap gap-1.5">
               {dietary.length ? dietary.map((l) => (
-                <span key={l} className="rounded-full bg-zinc-50 px-2.5 py-0.5 text-xs font-medium">{l}</span>
-              )) : <span className="text-sm text-zinc-500">—</span>}
+                <span key={l} className="rounded-full bg-[#ffedd5] px-2.5 py-1 text-xs font-medium text-[#c2410c]">{l}</span>
+              )) : <span className="text-sm text-zinc-400">—</span>}
             </dd>
           </div>
         </dl>
@@ -288,38 +314,73 @@ function ProfileCard({ r, onSaved }: { r: any; onSaved: (fields: Record<string, 
     );
   }
 
+  /* ----------------------------- Edit view ----------------------------- */
   return (
-    <Card title="Restaurant Profile">
-      <div className="mb-5 flex items-center justify-between gap-3">
-        <p className="text-sm text-zinc-500">Editing — changes apply to your concierge as soon as you save.</p>
-        <div className="flex shrink-0 gap-2">
-          <Button size="sm" onClick={save} disabled={saving} className="rounded-full">
-            {saving ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <Save className="mr-1.5 h-3.5 w-3.5" />} Save
-          </Button>
-          <Button size="sm" variant="ghost" onClick={cancel} className="rounded-full"><X className="mr-1.5 h-3.5 w-3.5" /> Cancel</Button>
+    <Card title="Edit Restaurant Profile">
+      <p className="-mt-3 mb-6 text-sm text-zinc-500">Changes apply to your concierge the moment you save.</p>
+
+      {/* Logo + live preview */}
+      <div className="grid gap-6 rounded-2xl border border-zinc-200 bg-zinc-50/60 p-5 sm:grid-cols-[1fr_minmax(0,300px)]">
+        <div>
+          <span className="text-xs font-medium uppercase tracking-wider text-zinc-500">Restaurant logo</span>
+          <div className="mt-3 flex items-center gap-4">
+            <LogoAvatar url={form.logo_url} name={form.name} size={64} />
+            <div className="space-y-2">
+              <div className="flex gap-2">
+                <label className={cn("inline-flex cursor-pointer items-center rounded-full border border-zinc-200 bg-white px-3 py-1.5 text-xs font-medium hover:bg-zinc-50", uploading && "pointer-events-none opacity-60")}>
+                  {uploading ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <Upload className="mr-1.5 h-3.5 w-3.5" />}
+                  {form.logo_url ? "Change" : "Upload logo"}
+                  <input type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadLogo(f); }} />
+                </label>
+                {form.logo_url && (
+                  <button onClick={() => set("logo_url", "")} className="rounded-full p-1.5 text-zinc-400 hover:bg-zinc-100 hover:text-zinc-900" aria-label="Remove logo">
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                )}
+              </div>
+              <p className="text-[11px] text-zinc-400">Square image works best (PNG/JPG). Shows on your concierge.</p>
+            </div>
+          </div>
+        </div>
+        <div>
+          <span className="text-xs font-medium uppercase tracking-wider text-zinc-500">Preview</span>
+          <div className="mt-3"><ConciergeHeaderPreview r={{ ...r, ...form }} /></div>
         </div>
       </div>
-      <div className="grid gap-4 sm:grid-cols-2">
+
+      {/* Basics */}
+      <EditGroup title="Basics">
         <Field label="Restaurant name"><Input className={inputCls} value={form.name} onChange={(e) => set("name", e.target.value)} /></Field>
         <Field label="Cuisine"><Input className={inputCls} value={form.cuisine_type} onChange={(e) => set("cuisine_type", e.target.value)} /></Field>
-        <Field label="Website"><Input className={inputCls} value={form.website_url} onChange={(e) => set("website_url", e.target.value)} /></Field>
+      </EditGroup>
+
+      {/* Contact */}
+      <EditGroup title="Contact & location">
         <Field label="Phone"><PhoneField value={form.phone} onChange={(v) => set("phone", v)} /></Field>
-        <Field label="Email"><Input className={inputCls} value={form.email} onChange={(e) => set("email", e.target.value)} /></Field>
+        <Field label="Email"><Input className={inputCls} type="email" value={form.email} onChange={(e) => set("email", e.target.value)} /></Field>
+        <Field label="Website"><Input className={inputCls} value={form.website_url} onChange={(e) => set("website_url", e.target.value)} /></Field>
+        <div className="hidden sm:block" />
+        <div className="sm:col-span-2"><Field label="Address"><AddressAutocomplete placeholder="Start typing your address…" value={form.address} onChange={(v) => set("address", v)} /></Field></div>
+      </EditGroup>
+
+      {/* Details */}
+      <EditGroup title="What guests ask about">
         <Field label="Popular dishes"><Input className={inputCls} value={form.popular_dishes} onChange={(e) => set("popular_dishes", e.target.value)} /></Field>
-        <div className="sm:col-span-2"><Field label="Address"><AddressAutocomplete value={form.address} onChange={(v) => set("address", v)} /></Field></div>
-        <div className="sm:col-span-2"><Field label="Story / about"><Textarea className="min-h-[80px] rounded-xl" value={form.story} onChange={(e) => set("story", e.target.value)} /></Field></div>
         <Field label="Parking"><Input className={inputCls} value={form.parking_info} onChange={(e) => set("parking_info", e.target.value)} /></Field>
         <Field label="Delivery & pickup"><Input className={inputCls} value={form.delivery_pickup} onChange={(e) => set("delivery_pickup", e.target.value)} /></Field>
+        <div className="hidden sm:block" />
+        <div className="sm:col-span-2"><Field label="Story / about"><Textarea className="min-h-[80px] rounded-xl" value={form.story} onChange={(e) => set("story", e.target.value)} /></Field></div>
         <div className="sm:col-span-2"><Field label="Allergy info"><Textarea className="min-h-[60px] rounded-xl" value={form.allergy_info} onChange={(e) => set("allergy_info", e.target.value)} /></Field></div>
-      </div>
+      </EditGroup>
 
-      <div className="mt-5">
-        <span className="text-xs uppercase tracking-wider text-zinc-500">Dietary options</span>
-        <div className="mt-2 flex flex-wrap gap-2">
+      {/* Dietary */}
+      <div className="mt-6">
+        <span className="text-xs font-medium uppercase tracking-wider text-zinc-500">Dietary options</span>
+        <div className="mt-2.5 flex flex-wrap gap-2">
           {DIETARY.map(([key, label]) => (
             <label key={key} className={cn(
-              "flex cursor-pointer items-center gap-2 rounded-full border px-3 py-1.5 text-sm transition",
-              form[key] ? "border-zinc-900 bg-zinc-50" : "border-zinc-200 hover:border-zinc-900/40",
+              "flex cursor-pointer items-center gap-2 rounded-full border px-3.5 py-2 text-sm transition",
+              form[key] ? "border-[#c2410c] bg-[#ffedd5] text-[#c2410c]" : "border-zinc-200 hover:border-zinc-300",
             )}>
               <Checkbox checked={form[key]} onCheckedChange={(v) => set(key, !!v)} />
               {label}
@@ -327,15 +388,87 @@ function ProfileCard({ r, onSaved }: { r: any; onSaved: (fields: Record<string, 
           ))}
         </div>
       </div>
+
+      {/* Actions */}
+      <div className="mt-8 flex items-center gap-3 border-t border-zinc-100 pt-6">
+        <Button onClick={save} disabled={saving} className="rounded-full bg-gradient-hero text-white hover:opacity-90">
+          {saving ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <Save className="mr-1.5 h-3.5 w-3.5" />} Save changes
+        </Button>
+        <Button variant="ghost" onClick={cancel} className="rounded-full"><X className="mr-1.5 h-3.5 w-3.5" /> Cancel</Button>
+      </div>
     </Card>
   );
 }
 
-function Detail({ label, value }: { label: string; value: any }) {
+/** Pull a "City, ST" hint from a full address string for the profile subtitle. */
+function cityFromAddress(addr?: string): string {
+  if (!addr) return "";
+  const parts = addr.split(",").map((p) => p.trim()).filter(Boolean);
+  if (parts.length >= 3) return `${parts[parts.length - 3]}, ${parts[parts.length - 2].split(" ")[0]}`;
+  return parts.slice(-2).join(", ");
+}
+
+function LogoAvatar({ url, name, size }: { url?: string; name?: string; size: number }) {
+  const initial = (name?.trim()?.[0] || "M").toUpperCase();
+  return url ? (
+    <img
+      src={url}
+      alt=""
+      className="shrink-0 rounded-2xl border border-zinc-200 object-cover"
+      style={{ width: size, height: size }}
+    />
+  ) : (
+    <div
+      className="grid shrink-0 place-items-center rounded-2xl bg-gradient-hero font-semibold text-white"
+      style={{ width: size, height: size, fontSize: size * 0.4 }}
+    >
+      {initial}
+    </div>
+  );
+}
+
+function ConciergeHeaderPreview({ r }: { r: any }) {
+  const accent = r.brand_color || "#c2410c";
+  return (
+    <div className="overflow-hidden rounded-2xl border border-zinc-200 shadow-sm">
+      <div className="flex items-center gap-3 p-3.5" style={{ background: accent }}>
+        {r.logo_url ? (
+          <img src={r.logo_url} alt="" className="h-9 w-9 rounded-full border border-white/30 object-cover" />
+        ) : (
+          <div className="grid h-9 w-9 place-items-center rounded-full bg-white/20 text-white">
+            <Sparkles className="h-4 w-4" />
+          </div>
+        )}
+        <div className="leading-tight text-white">
+          <div className="text-sm font-semibold">{r.concierge_name || "Maître AI"}</div>
+          <div className="text-[11px] opacity-85">{r.name || "Your restaurant"}</div>
+        </div>
+      </div>
+      <div className="bg-white p-3">
+        <div className="max-w-[85%] rounded-2xl rounded-tl-sm bg-zinc-100 p-2.5 text-xs text-zinc-700">
+          {r.welcome_message || "Hi there! 👋 How can I help you today?"}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function EditGroup({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div className="mt-6">
+      <div className="mb-3 text-xs font-semibold uppercase tracking-wider text-zinc-400">{title}</div>
+      <div className="grid gap-4 sm:grid-cols-2">{children}</div>
+    </div>
+  );
+}
+
+function DetailRow({ icon: Icon, label, value }: { icon?: any; label: string; value: any }) {
   return (
     <div>
-      <dt className="text-xs uppercase tracking-wider text-zinc-500">{label}</dt>
-      <dd className="mt-1.5 whitespace-pre-wrap break-words text-sm">{value || <span className="text-zinc-500">—</span>}</dd>
+      <dt className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wider text-zinc-400">
+        {Icon && <Icon className="h-3.5 w-3.5" />} {label}
+      </dt>
+      <dd className="mt-1.5 whitespace-pre-wrap break-words text-sm text-zinc-900">{value || <span className="text-zinc-400">—</span>}</dd>
     </div>
   );
 }
@@ -543,9 +676,13 @@ function ConciergeTester({ r }: { r: any }) {
         {/* Header */}
         <div className="flex items-center gap-3 border-b border-zinc-200 px-5 py-4">
           <div className="relative">
-            <div className="grid h-9 w-9 place-items-center rounded-full text-white" style={{ background: accent }}>
-              <Sparkles className="h-3.5 w-3.5" strokeWidth={1.5} />
-            </div>
+            {r.logo_url ? (
+              <img src={r.logo_url} alt="" className="h-9 w-9 rounded-full object-cover" />
+            ) : (
+              <div className="grid h-9 w-9 place-items-center rounded-full text-white" style={{ background: accent }}>
+                <Sparkles className="h-3.5 w-3.5" strokeWidth={1.5} />
+              </div>
+            )}
             <span className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-emerald-500 ring-2 ring-card" />
           </div>
           <div className="flex-1 leading-tight">
@@ -1459,7 +1596,11 @@ function PreviewWidget({ r, actions }: { r: any; actions?: ActionBtn[] }) {
   return (
     <div className="overflow-hidden rounded-2xl border border-zinc-200 shadow-md">
       <div style={{ background: color }} className="flex items-center gap-3 p-4 text-white">
-        <div className="grid h-9 w-9 place-items-center rounded-full bg-white/20"><Sparkles className="h-4 w-4" /></div>
+        {r.logo_url ? (
+          <img src={r.logo_url} alt="" className="h-9 w-9 rounded-full border border-white/30 object-cover" />
+        ) : (
+          <div className="grid h-9 w-9 place-items-center rounded-full bg-white/20"><Sparkles className="h-4 w-4" /></div>
+        )}
         <div>
           <div className="text-sm font-semibold">{r.concierge_name || "Maître AI"}</div>
           <div className="text-xs opacity-80">Online</div>
