@@ -124,7 +124,7 @@
       ".arc-send{width:38px;height:38px;flex-shrink:0;background:" + c + ";color:#fff;border:none;border-radius:9999px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:opacity .15s;}" +
       ".arc-send:disabled{opacity:.4;cursor:not-allowed;}" +
       ".arc-send svg{width:16px;height:16px;}" +
-      ".arc-count{margin-top:-6px;padding:0 16px 10px;text-align:right;font-size:11px;color:#a1a1aa;background:#fff;}" +
+      ".arc-count{margin-top:-6px;padding:0 16px 10px;text-align:right;font-size:11px;font-weight:500;color:#52525b;background:#fff;}" +
       ".arc-count.full{color:#dc2626;font-weight:600;}";
 
     var existing = document.querySelector("style[data-arc]");
