@@ -8,6 +8,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { extractPdfText, ingestMenu } from "@/lib/pdf-client";
 import { BILLING_ENABLED } from "@/lib/flags";
+import { PhoneField, AddressAutocomplete } from "@/components/form-fields";
 import {
   Utensils, FileText, Check, Sparkles, Copy, Pencil, LogOut, Loader2, AlertCircle,
   Plus, Trash2, Save, X, MessageSquare, RefreshCw, Upload, HelpCircle, Sparkle,
@@ -302,10 +303,10 @@ function ProfileCard({ r, onSaved }: { r: any; onSaved: (fields: Record<string, 
         <Field label="Restaurant name"><Input className={inputCls} value={form.name} onChange={(e) => set("name", e.target.value)} /></Field>
         <Field label="Cuisine"><Input className={inputCls} value={form.cuisine_type} onChange={(e) => set("cuisine_type", e.target.value)} /></Field>
         <Field label="Website"><Input className={inputCls} value={form.website_url} onChange={(e) => set("website_url", e.target.value)} /></Field>
-        <Field label="Phone"><Input className={inputCls} value={form.phone} onChange={(e) => set("phone", e.target.value)} /></Field>
+        <Field label="Phone"><PhoneField value={form.phone} onChange={(v) => set("phone", v)} /></Field>
         <Field label="Email"><Input className={inputCls} value={form.email} onChange={(e) => set("email", e.target.value)} /></Field>
         <Field label="Popular dishes"><Input className={inputCls} value={form.popular_dishes} onChange={(e) => set("popular_dishes", e.target.value)} /></Field>
-        <div className="sm:col-span-2"><Field label="Address"><Input className={inputCls} value={form.address} onChange={(e) => set("address", e.target.value)} /></Field></div>
+        <div className="sm:col-span-2"><Field label="Address"><AddressAutocomplete value={form.address} onChange={(v) => set("address", v)} /></Field></div>
         <div className="sm:col-span-2"><Field label="Story / about"><Textarea className="min-h-[80px] rounded-xl" value={form.story} onChange={(e) => set("story", e.target.value)} /></Field></div>
         <Field label="Parking"><Input className={inputCls} value={form.parking_info} onChange={(e) => set("parking_info", e.target.value)} /></Field>
         <Field label="Delivery & pickup"><Input className={inputCls} value={form.delivery_pickup} onChange={(e) => set("delivery_pickup", e.target.value)} /></Field>
