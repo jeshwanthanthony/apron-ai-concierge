@@ -475,23 +475,6 @@ function AppearanceCard({ r, onSaved }: { r: any; onSaved: (fields: Record<strin
                     </button>
                   )}
                 </div>
-                <div className="flex gap-1.5">
-                  {LOGO_SHAPES.map((sh) => {
-                    const on = form.logo_shape === sh.id;
-                    return (
-                      <button
-                        key={sh.id}
-                        type="button"
-                        onClick={() => set("logo_shape", sh.id)}
-                        className={cn("flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-[11px] font-medium transition",
-                          on ? "border-[#c2410c] bg-[#ffedd5] text-[#c2410c]" : "border-zinc-200 text-zinc-500 hover:bg-zinc-50")}
-                      >
-                        <span className="h-3.5 w-3.5 bg-current" style={{ borderRadius: sh.radius }} />
-                        {sh.label}
-                      </button>
-                    );
-                  })}
-                </div>
               </div>
             </div>
             <p className="mt-2 text-[11px] text-zinc-400">Replaces the default sparkle/initial in the chat — shows in the tester and on your website.</p>

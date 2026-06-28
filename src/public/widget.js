@@ -171,6 +171,10 @@
     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>';
 
   function build() {
+    // Idempotent: if we already drew the widget (e.g. with defaults before the
+    // live config arrived), remove it so this rebuild replaces it cleanly.
+    var existingRoot = document.querySelector(".arc-root");
+    if (existingRoot) existingRoot.remove();
     var root = el("div", "arc-root");
 
     // Launcher: greeting bubble + the floating action button.
@@ -391,7 +395,8 @@
     if (!data || typeof data !== "object") return;
     if (data.brand_color) cfg.brandColor = data.brand_color;
     if (data.concierge_name) cfg.conciergeName = data.concierge_name;
-    if (data.logo_url) cfg.logo = data.logo_url;
+    // Use empty-string fallback so clearing the logo in the dashboard also syncs.
+    if ("logo_url" in data) cfg.logo = data.logo_url || "";
     if (data.logo_shape) cfg.logoShape = data.logo_shape;
     if (data.welcome_message) cfg.welcomeMessage = data.welcome_message;
     if (data.reservation_button_label) cfg.reservationLabel = data.reservation_button_label;
@@ -427,14 +432,9 @@
   }
 
   function init() {
-    var rendered = false;
-    function go() {
-      if (rendered) return;
-      rendered = true;
-      render();
-    }
-    // Fetch live appearance config, but never let a slow/unreachable request
-    // block the launcher — draw it within 1.5s no matter what.
+    var configLoaded = false;
+    // Fetch live appearance config. When it arrives we (re)render with the real
+    // color/logo/buttons — even if the fallback already drew the launcher.
     var url = apiBase + "/api/widget-config?r=" + encodeURIComponent(restaurantId);
     fetch(url)
       .then(function (res) {
@@ -442,10 +442,19 @@
       })
       .then(function (data) {
         if (data && !data.error) applyConfig(data);
+        configLoaded = true;
+        render();
       })
-      .catch(function () {})
-      .then(go);
-    setTimeout(go, 1500);
+      .catch(function () {
+        configLoaded = true;
+        render();
+      });
+    // Never let a slow/unreachable request block the launcher — draw it within
+    // 1.5s with defaults. If the config resolves later, render() runs again and
+    // replaces it (build() is idempotent), so color + logo sync in.
+    setTimeout(function () {
+      if (!configLoaded) render();
+    }, 1500);
   }
 
   if (document.readyState === "loading") {
