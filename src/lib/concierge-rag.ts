@@ -46,16 +46,18 @@ export async function ensureEnv() {
 
 /** Build a server Supabase client. Pass an access token to act as that user (RLS). */
 export function serverClient(accessToken?: string) {
-  // The Supabase URL + publishable (anon) key are PUBLIC. Fall back to the
-  // build-time `import.meta.env.VITE_*` values (same as the browser client) so
-  // server routes work on hosts like Cloudflare without any env var setup —
-  // process.env isn't populated there (no `.env` file at runtime).
-  const env = (import.meta as any).env || {};
-  const url = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || env.VITE_SUPABASE_URL;
+  // The Supabase URL + publishable (anon) key are PUBLIC. We reference the
+  // EXACT `import.meta.env.VITE_*` literals so Vite inlines them at build time
+  // (same as the browser client). This is what makes server routes work on
+  // Cloudflare, where process.env has no Supabase vars at runtime.
+  const url =
+    process.env.SUPABASE_URL ||
+    process.env.VITE_SUPABASE_URL ||
+    import.meta.env.VITE_SUPABASE_URL;
   const anon =
     process.env.SUPABASE_PUBLISHABLE_KEY ||
     process.env.VITE_SUPABASE_PUBLISHABLE_KEY ||
-    env.VITE_SUPABASE_PUBLISHABLE_KEY;
+    import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
   if (!url || !anon) throw new Error("Supabase env not configured");
   return createClient<Database>(url, anon, {
     auth: { persistSession: false, autoRefreshToken: false },
