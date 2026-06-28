@@ -36,8 +36,9 @@ export const Route = createFileRoute("/api/widget-config")({
         if (error) return json({ error: "Could not load config" }, 500);
         if (!data) return json({ error: "Unknown restaurant" }, 404);
 
-        // Cache briefly at the edge so it's snappy but still reflects edits quickly.
-        return json(data, 200, { "Cache-Control": "public, max-age=30" });
+        // Always fresh so dashboard edits reflect immediately (the widget also
+        // polls this endpoint, so it must never be served stale).
+        return json(data, 200, { "Cache-Control": "no-store, max-age=0" });
       },
     },
   },
