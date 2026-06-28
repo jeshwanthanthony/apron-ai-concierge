@@ -1349,7 +1349,10 @@ function UpgradeModal({
 
 function WidgetInstallCard({ r }: { r: any }) {
   const origin = typeof window !== "undefined" ? window.location.origin : "";
-  const widgetSnippet = `<script src="${origin}/widget.js" data-restaurant="${r.id}" data-color="${r.brand_color || "#7c3aed"}" data-name="${(r.concierge_name || "Maître AI").replace(/"/g, "&quot;")}" data-welcome="${(r.welcome_message || "Hello!").replace(/"/g, "&quot;")}" async></script>`;
+  // Minimal snippet — only the restaurant ID. All appearance (color, logo,
+  // name, welcome, buttons) loads live from the server, so changing settings
+  // never requires re-copying this code.
+  const widgetSnippet = `<script src="${origin}/widget.js" data-restaurant="${r.id}" async></script>`;
   const copy = () => { navigator.clipboard.writeText(widgetSnippet); toast.success("Snippet copied"); };
 
   return (

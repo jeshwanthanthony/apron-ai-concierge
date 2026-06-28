@@ -417,10 +417,32 @@
     }
   }
 
+  // A fingerprint of the visible appearance — used to detect live changes.
+  var renderedSig = "";
+  function configSignature() {
+    return [
+      cfg.brandColor,
+      cfg.logo || "",
+      cfg.logoShape || "circle",
+      cfg.conciergeName,
+      cfg.welcomeMessage,
+      JSON.stringify(cfg.actions || []),
+    ].join("|");
+  }
+
+  function fetchConfig() {
+    // Cache-bust so we always get the latest settings (endpoint is no-store too).
+    var url = apiBase + "/api/widget-config?r=" + encodeURIComponent(restaurantId) + "&t=" + Date.now();
+    return fetch(url).then(function (res) {
+      return res.ok ? res.json() : null;
+    });
+  }
+
   function render() {
     try {
       injectStyles();
       build();
+      renderedSig = configSignature();
     } catch (err) {
       console.error("[AI Restaurant Concierge] Widget failed to initialize", err);
       var fb = document.createElement("div");
@@ -431,23 +453,39 @@
     }
   }
 
+  // Poll for dashboard changes and apply them live (no page reload, no
+  // re-pasting the snippet). Only rebuild when the chat is closed, so we never
+  // interrupt an active conversation.
+  function startPolling() {
+    setInterval(function () {
+      fetchConfig()
+        .then(function (data) {
+          if (!data || data.error) return;
+          applyConfig(data);
+          if (configSignature() === renderedSig) return; // nothing changed
+          var win = document.querySelector(".arc-window");
+          var open = win && win.classList.contains("arc-open");
+          if (!open) render();
+        })
+        .catch(function () {});
+    }, 15000);
+  }
+
   function init() {
     var configLoaded = false;
     // Fetch live appearance config. When it arrives we (re)render with the real
     // color/logo/buttons — even if the fallback already drew the launcher.
-    var url = apiBase + "/api/widget-config?r=" + encodeURIComponent(restaurantId);
-    fetch(url)
-      .then(function (res) {
-        return res.ok ? res.json() : null;
-      })
+    fetchConfig()
       .then(function (data) {
         if (data && !data.error) applyConfig(data);
         configLoaded = true;
         render();
+        startPolling();
       })
       .catch(function () {
         configLoaded = true;
         render();
+        startPolling();
       });
     // Never let a slow/unreachable request block the launcher — draw it within
     // 1.5s with defaults. If the config resolves later, render() runs again and
