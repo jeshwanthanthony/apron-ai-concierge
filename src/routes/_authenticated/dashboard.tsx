@@ -44,6 +44,16 @@ function shapeRadius(shape?: string) {
   return LOGO_SHAPES.find((s) => s.id === shape)?.radius ?? "50%";
 }
 
+/**
+ * Build a safe storage path. Uses only the file extension (never the raw
+ * filename), so spaces / unicode / weird characters can never produce a broken
+ * or messy object key. e.g. "<userId>/logo-1730000000000.png".
+ */
+function storagePath(userId: string, prefix: string, file: File): string {
+  const ext = (file.name.split(".").pop() || "png").toLowerCase().replace(/[^a-z0-9]/g, "").slice(0, 5) || "png";
+  return `${userId}/${prefix}-${Date.now()}.${ext}`;
+}
+
 /** Chat avatar — the uploaded logo (in the chosen shape) or a fallback. */
 function BotAvatar({
   logo, shape, accent, size, fallback,
@@ -405,8 +415,7 @@ function AppearanceCard({ r, onSaved }: { r: any; onSaved: (fields: Record<strin
 
   const uploadLogo = async (file: File) => {
     setUploadingLogo(true);
-    const safe = file.name.replace(/[^a-zA-Z0-9.-]/g, "_");
-    const path = `${r.user_id}/logo-${Date.now()}-${safe}`;
+    const path = storagePath(r.user_id, "logo", file);
     const up = await supabase.storage.from("logos").upload(path, file, { upsert: true });
     setUploadingLogo(false);
     if (up.error) { toast.error(up.error.message); return; }
@@ -421,7 +430,7 @@ function AppearanceCard({ r, onSaved }: { r: any; onSaved: (fields: Record<strin
   const removeAction = (i: number) => setActions((a) => a.filter((_, idx) => idx !== i));
 
   const uploadImage = async (i: number, file: File) => {
-    const path = `${r.user_id}/btn-${Date.now()}-${file.name}`;
+    const path = storagePath(r.user_id, "btn", file);
     const up = await supabase.storage.from("logos").upload(path, file, { upsert: true });
     if (up.error) { toast.error(up.error.message); return; }
     const { data } = supabase.storage.from("logos").getPublicUrl(path);
@@ -750,7 +759,8 @@ function MenuCard({ r, onUpdated }: { r: any; onUpdated: (path: string) => void 
     setBusy(true);
     try {
       setStatus("Uploading…");
-      const filePath = `${r.user_id}/${Date.now()}-${file.name}`;
+      const safeName = file.name.replace(/[^a-zA-Z0-9.-]/g, "_");
+      const filePath = `${r.user_id}/${Date.now()}-${safeName}`;
       const up = await supabase.storage.from("menus").upload(filePath, file, { upsert: true });
       if (up.error) throw up.error;
       const { error } = await supabase.from("restaurants").update({ menu_pdf_path: filePath }).eq("id", r.id);
