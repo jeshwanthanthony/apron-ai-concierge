@@ -1347,12 +1347,17 @@ function UpgradeModal({
 
 /* ------------------------------ Widget install ----------------------------- */
 
+// Fixed, always-working host the widget loads from — so the snippet a
+// restaurant pastes never depends on which URL the dashboard was opened from.
+// Once hiremaitre.com is live as a Custom Domain, switch this to
+// "https://hiremaitre.com" for a cleaner address.
+const WIDGET_HOST = "https://jeshwanthanthony-apron-ai-concierge.hirematrie.workers.dev";
+
 function WidgetInstallCard({ r }: { r: any }) {
-  const origin = typeof window !== "undefined" ? window.location.origin : "";
   // Minimal snippet — only the restaurant ID. All appearance (color, logo,
   // name, welcome, buttons) loads live from the server, so changing settings
   // never requires re-copying this code.
-  const widgetSnippet = `<script src="${origin}/widget.js" data-restaurant="${r.id}" async></script>`;
+  const widgetSnippet = `<script src="${WIDGET_HOST}/widget.js" data-restaurant="${r.id}" async></script>`;
   const copy = () => { navigator.clipboard.writeText(widgetSnippet); toast.success("Snippet copied"); };
 
   return (
