@@ -31,14 +31,20 @@ export const Route = createFileRoute("/api/widget-config")({
         const id = new URL(request.url).searchParams.get("r")?.trim();
         if (!id) return json({ error: "missing restaurant id" }, 400);
 
-        const supabase = serverClient();
-        const { data, error } = await supabase.rpc("get_widget_config", { p_restaurant_id: id });
-        if (error) return json({ error: "Could not load config" }, 500);
-        if (!data) return json({ error: "Unknown restaurant" }, 404);
+        try {
+          const supabase = serverClient();
+          const { data, error } = await supabase.rpc("get_widget_config", { p_restaurant_id: id });
+          if (error) return json({ error: "Could not load config", detail: error.message }, 500);
+          if (!data) return json({ error: "Unknown restaurant" }, 404);
 
-        // Always fresh so dashboard edits reflect immediately (the widget also
-        // polls this endpoint, so it must never be served stale).
-        return json(data, 200, { "Cache-Control": "no-store, max-age=0" });
+          // Always fresh so dashboard edits reflect immediately (the widget also
+          // polls this endpoint, so it must never be served stale).
+          return json(data, 200, { "Cache-Control": "no-store, max-age=0" });
+        } catch (e) {
+          // Surface the real reason (e.g. Supabase env not configured) so the
+          // endpoint is self-diagnosing instead of failing opaquely.
+          return json({ error: "config endpoint crashed", detail: e instanceof Error ? e.message : String(e) }, 500);
+        }
       },
     },
   },
