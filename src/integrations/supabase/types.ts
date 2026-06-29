@@ -193,6 +193,7 @@ export type Database = {
           hours: Json | null
           id: string
           instagram_link: string | null
+          launcher_pulse: string
           logo_shape: string
           logo_url: string | null
           menu_pdf_path: string | null
@@ -249,6 +250,7 @@ export type Database = {
           hours?: Json | null
           id?: string
           instagram_link?: string | null
+          launcher_pulse?: string
           logo_shape?: string
           logo_url?: string | null
           menu_pdf_path?: string | null
@@ -305,6 +307,7 @@ export type Database = {
           hours?: Json | null
           id?: string
           instagram_link?: string | null
+          launcher_pulse?: string
           logo_shape?: string
           logo_url?: string | null
           menu_pdf_path?: string | null

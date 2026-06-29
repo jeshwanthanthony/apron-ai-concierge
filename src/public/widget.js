@@ -48,6 +48,7 @@
     reservationLabel: "Reserve a Table",
     orderLabel: "Order Online",
     cateringLabel: "Catering Inquiry",
+    launcherPulse: "once",
     actions: [],
   };
   cfg.actions = [
@@ -95,6 +96,7 @@
       ".arc-bubble:hover{transform:scale(1.09) translateY(-2px);box-shadow:0 16px 34px -8px rgba(0,0,0,.55);}" +
       ".arc-bubble:active{transform:scale(.95);}" +
       ".arc-bubble svg{width:28px;height:28px;transition:transform .3s ease;}" +
+      ".arc-bubble-logo{width:100%;height:100%;border-radius:9999px;object-fit:cover;display:block;}" +
       ".arc-pulse{position:absolute;inset:0;border-radius:9999px;background:" + c + ";z-index:-1;animation:arc-pulse 2.6s cubic-bezier(.4,0,.6,1) infinite;}" +
       "@keyframes arc-pulse{0%{transform:scale(1);opacity:.5;}70%{transform:scale(1.7);opacity:0;}100%{transform:scale(1.7);opacity:0;}}" +
       ".arc-blip{position:absolute;top:3px;right:3px;width:14px;height:14px;border-radius:9999px;background:#22c55e;border:3px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.04);}" +
@@ -193,8 +195,12 @@
     var bubble = el("button", "arc-bubble");
     bubble.setAttribute("aria-label", "Open chat");
     var pulse = el("span", "arc-pulse");
-    var iconWrap = el("span", null, CHAT_ICON);
-    iconWrap.style.cssText = "display:flex;align-items:center;justify-content:center;";
+    // The closed-state launcher shows the restaurant logo (if set), else a chat icon.
+    function closedIcon() {
+      return cfg.logo ? '<img class="arc-bubble-logo" src="' + cfg.logo + '" alt="">' : CHAT_ICON;
+    }
+    var iconWrap = el("span", null, closedIcon());
+    iconWrap.style.cssText = "display:flex;align-items:center;justify-content:center;width:100%;height:100%;";
     var blip = el("span", "arc-blip");
     bubble.appendChild(pulse);
     bubble.appendChild(iconWrap);
@@ -342,9 +348,14 @@
 
     var hasOpened = false;
     var greetDismissed = false;
+    var alwaysPulse = cfg.launcherPulse === "always";
 
     function showGreet() {
-      if (!greetDismissed && !hasOpened) greet.classList.add("arc-show");
+      if (greetDismissed) return;
+      if (win.classList.contains("arc-open")) return;
+      // Normally only invite before the first open; in "always" mode keep re-inviting.
+      if (hasOpened && !alwaysPulse) return;
+      greet.classList.add("arc-show");
     }
     function hideGreet() {
       greet.classList.remove("arc-show");
@@ -354,14 +365,21 @@
       if (open) {
         win.classList.add("arc-open");
         iconWrap.innerHTML = CLOSE_ICON;
-        pulse.style.display = "none";
-        blip.style.display = "none";
+        // In "always" mode the pulse keeps inviting even after opening.
+        if (!alwaysPulse) {
+          pulse.style.display = "none";
+          blip.style.display = "none";
+        }
         hideGreet();
         hasOpened = true;
         setTimeout(function () { try { input.focus(); } catch (e) {} }, 80);
       } else {
         win.classList.remove("arc-open");
-        iconWrap.innerHTML = CHAT_ICON;
+        iconWrap.innerHTML = closedIcon();
+        if (alwaysPulse) {
+          pulse.style.display = "";
+          blip.style.display = "";
+        }
       }
     }
 
@@ -378,12 +396,21 @@
       e.stopPropagation();
       greetDismissed = true;
       hideGreet();
-      pulse.style.display = "none";
+      // Keep the attention pulse going in "always" mode even if the greeting is dismissed.
+      if (!alwaysPulse) pulse.style.display = "none";
     });
 
     // Invite a click shortly after load, then tuck away if ignored.
     setTimeout(showGreet, 2200);
     setTimeout(function () { if (!hasOpened) hideGreet(); }, 13000);
+    // In "always" mode, re-show the greeting periodically while the chat is closed.
+    if (alwaysPulse) {
+      setInterval(function () {
+        if (greetDismissed || win.classList.contains("arc-open")) return;
+        showGreet();
+        setTimeout(hideGreet, 8000);
+      }, 30000);
+    }
 
     root.appendChild(launch);
     root.appendChild(win);
@@ -398,6 +425,7 @@
     // Use empty-string fallback so clearing the logo in the dashboard also syncs.
     if ("logo_url" in data) cfg.logo = data.logo_url || "";
     if (data.logo_shape) cfg.logoShape = data.logo_shape;
+    if (data.launcher_pulse) cfg.launcherPulse = data.launcher_pulse;
     if (data.welcome_message) cfg.welcomeMessage = data.welcome_message;
     if (data.reservation_button_label) cfg.reservationLabel = data.reservation_button_label;
     if (data.order_button_label) cfg.orderLabel = data.order_button_label;
@@ -424,6 +452,7 @@
       cfg.brandColor,
       cfg.logo || "",
       cfg.logoShape || "circle",
+      cfg.launcherPulse || "once",
       cfg.conciergeName,
       cfg.welcomeMessage,
       JSON.stringify(cfg.actions || []),

@@ -397,6 +397,7 @@ function AppearanceCard({ r, onSaved }: { r: any; onSaved: (fields: Record<strin
     welcome_message: r.welcome_message ?? "Hi there! 👋 How can I help you today?",
     logo_url: r.logo_url ?? "",
     logo_shape: r.logo_shape ?? "circle",
+    launcher_pulse: r.launcher_pulse ?? "once",
   });
   const [actions, setActions] = useState<ActionBtn[]>(() => {
     const a = r.action_buttons;
@@ -505,6 +506,31 @@ function AppearanceCard({ r, onSaved }: { r: any; onSaved: (fields: Record<strin
                 <Palette className="h-4 w-4 text-zinc-500" />
               </div>
             </div>
+          </Field>
+
+          <Field label="Chat bubble attention">
+            <div className="flex flex-wrap gap-2">
+              {[
+                { id: "once", label: "Calm — stop after first open" },
+                { id: "always", label: "Always pulse & re-invite" },
+              ].map((opt) => {
+                const on = (form.launcher_pulse || "once") === opt.id;
+                return (
+                  <button
+                    key={opt.id}
+                    type="button"
+                    onClick={() => set("launcher_pulse", opt.id)}
+                    className={cn(
+                      "rounded-full border px-3.5 py-2 text-sm font-medium transition",
+                      on ? "border-[#c2410c] bg-[#ffedd5] text-[#c2410c]" : "border-zinc-200 text-zinc-600 hover:bg-zinc-50",
+                    )}
+                  >
+                    {opt.label}
+                  </button>
+                );
+              })}
+            </div>
+            <p className="mt-1.5 text-[11px] text-zinc-400">"Always" keeps the bubble pulsing and re-shows the greeting to attract guests.</p>
           </Field>
 
           {/* Action buttons */}
