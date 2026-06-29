@@ -8,12 +8,13 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { extractPdfText, ingestMenu } from "@/lib/pdf-client";
 import { BILLING_ENABLED } from "@/lib/flags";
+import { LogoCropper } from "@/components/logo-cropper";
 import {
   Utensils, FileText, Check, Sparkles, Copy, Pencil, LogOut, Loader2, AlertCircle,
   Plus, Trash2, Save, X, MessageSquare, RefreshCw, Upload, HelpCircle, Sparkle,
   Palette, Clock, TrendingUp, Hash, Send, RotateCcw, Store, Code2,
   Image as ImageIcon, ArrowUpRight, Link2, Zap, CreditCard, Crown, Megaphone,
-  Phone, Mail, Globe, MapPin, Car, Truck,
+  Phone, Mail, Globe, MapPin, Car, Truck, Bell, BellRing, ShieldCheck,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -412,6 +413,7 @@ function AppearanceCard({ r, onSaved }: { r: any; onSaved: (fields: Record<strin
   });
   const [saving, setSaving] = useState(false);
   const [uploadingLogo, setUploadingLogo] = useState(false);
+  const [cropFile, setCropFile] = useState<File | null>(null);
   const set = (k: keyof typeof form, v: string) => setForm((f) => ({ ...f, [k]: v }));
 
   const uploadLogo = async (file: File) => {
@@ -468,7 +470,7 @@ function AppearanceCard({ r, onSaved }: { r: any; onSaved: (fields: Record<strin
                   <label className={cn("inline-flex cursor-pointer items-center rounded-full border border-zinc-200 bg-white px-3 py-1.5 text-xs font-medium hover:bg-zinc-50", uploadingLogo && "pointer-events-none opacity-60")}>
                     {uploadingLogo ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <Upload className="mr-1.5 h-3.5 w-3.5" />}
                     {form.logo_url ? "Change logo" : "Upload logo"}
-                    <input type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadLogo(f); }} />
+                    <input type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) setCropFile(f); e.target.value = ""; }} />
                   </label>
                   {form.logo_url && (
                     <button onClick={() => set("logo_url", "")} className="rounded-full p-1.5 text-zinc-400 hover:bg-zinc-100 hover:text-zinc-900" aria-label="Remove logo">
@@ -480,6 +482,17 @@ function AppearanceCard({ r, onSaved }: { r: any; onSaved: (fields: Record<strin
             </div>
             <p className="mt-2 text-[11px] text-zinc-400">Replaces the default sparkle/initial in the chat — shows in the tester and on your website.</p>
           </Field>
+
+          {cropFile && (
+            <LogoCropper
+              file={cropFile}
+              onCancel={() => setCropFile(null)}
+              onCropped={(blob) => {
+                setCropFile(null);
+                uploadLogo(new File([blob], "logo.png", { type: "image/png" }));
+              }}
+            />
+          )}
 
           <Field label="Welcome message"><Textarea className="min-h-[72px] rounded-xl" value={form.welcome_message} onChange={(e) => set("welcome_message", e.target.value)} /></Field>
 
@@ -508,11 +521,11 @@ function AppearanceCard({ r, onSaved }: { r: any; onSaved: (fields: Record<strin
             </div>
           </Field>
 
-          <Field label="Chat bubble attention">
-            <div className="flex flex-wrap gap-2">
+          <Field label="Bubble behavior">
+            <div className="grid grid-cols-2 gap-2.5">
               {[
-                { id: "once", label: "Calm — stop after first open" },
-                { id: "always", label: "Always pulse & re-invite" },
+                { id: "once", icon: Bell, title: "Standard", desc: "Greets once, then rests" },
+                { id: "always", icon: BellRing, title: "Attention-grabbing", desc: "Keeps pulsing & re-invites" },
               ].map((opt) => {
                 const on = (form.launcher_pulse || "once") === opt.id;
                 return (
@@ -521,16 +534,17 @@ function AppearanceCard({ r, onSaved }: { r: any; onSaved: (fields: Record<strin
                     type="button"
                     onClick={() => set("launcher_pulse", opt.id)}
                     className={cn(
-                      "rounded-full border px-3.5 py-2 text-sm font-medium transition",
-                      on ? "border-[#c2410c] bg-[#ffedd5] text-[#c2410c]" : "border-zinc-200 text-zinc-600 hover:bg-zinc-50",
+                      "flex flex-col items-start gap-1 rounded-xl border p-3 text-left transition",
+                      on ? "border-[#c2410c] bg-[#ffedd5]" : "border-zinc-200 hover:bg-zinc-50",
                     )}
                   >
-                    {opt.label}
+                    <opt.icon className={cn("h-4 w-4", on ? "text-[#c2410c]" : "text-zinc-400")} />
+                    <span className={cn("text-sm font-semibold", on ? "text-[#c2410c]" : "text-zinc-800")}>{opt.title}</span>
+                    <span className={cn("text-[11px] leading-tight", on ? "text-[#c2410c]/80" : "text-zinc-400")}>{opt.desc}</span>
                   </button>
                 );
               })}
             </div>
-            <p className="mt-1.5 text-[11px] text-zinc-400">"Always" keeps the bubble pulsing and re-shows the greeting to attract guests.</p>
           </Field>
 
           {/* Action buttons */}
@@ -1394,8 +1408,20 @@ function WidgetInstallCard({ r }: { r: any }) {
       <div className="mt-4 grid gap-3 sm:grid-cols-2">
         <PlatformGuide name="Wix" steps={["Settings → Custom Code (NOT HTML Embed — embeds run in an isolated iframe)", "Add Custom Code → All Pages → Body - end", "Paste snippet and save"]} />
         <PlatformGuide name="Squarespace" steps={["Settings → Advanced → Code Injection", "Paste snippet in Footer", "Save"]} />
+        <PlatformGuide name="WordPress" steps={["Appearance → Theme File Editor (or a 'Insert Headers and Footers' plugin)", "Paste snippet before </body> in the footer", "Update / Save"]} />
+        <PlatformGuide name="Shopify" steps={["Online Store → Themes → ⋯ → Edit code", "Open theme.liquid", "Paste snippet just before </body> and save"]} />
+        <PlatformGuide name="GoDaddy" steps={["Website Builder → Settings → Site-wide Code (or add an HTML section)", "Paste snippet in the Footer / end-of-body area", "Save & Publish"]} />
+        <PlatformGuide name="Webflow" steps={["Project Settings → Custom Code", "Paste snippet in 'Footer Code'", "Save → Publish"]} />
       </div>
-      <div className="mt-5 overflow-hidden rounded-xl border border-zinc-200 bg-zinc-900 p-4">
+
+      <div className="mt-5 flex items-start gap-2.5 rounded-xl border border-emerald-100 bg-emerald-50 p-3.5">
+        <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
+        <p className="text-xs leading-relaxed text-emerald-800">
+          <span className="font-semibold">Safe to embed publicly.</span> This snippet contains no passwords or secret keys — only your public widget ID. It's <em>meant</em> to live in your site's HTML, so it's fine if visitors can see it. Your OpenAI key and database credentials stay private on our server and are never exposed.
+        </p>
+      </div>
+
+      <div className="mt-4 overflow-hidden rounded-xl border border-zinc-200 bg-zinc-900 p-4">
         <pre className="overflow-x-auto text-xs leading-relaxed text-zinc-100">{widgetSnippet}</pre>
       </div>
       <Button onClick={copy} variant="outline" className="mt-4 rounded-full">
