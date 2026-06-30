@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { ensureEnv, serverClient, embedTexts, toVectorLiteral } from "@/lib/concierge-rag";
 import { BILLING_ENABLED } from "@/lib/flags";
+import { personaById, answerLengthById } from "@/lib/ai-persona";
 
 /**
  * Public AI concierge endpoint used by the embeddable widget.
@@ -62,6 +63,17 @@ function buildContextPrompt(ctx: Record<string, any>): string {
   };
   add("Restaurant name", ctx.name);
   add("Cuisine", ctx.cuisine_type);
+
+  const menuNames: string[] = Array.isArray(ctx.menu_names)
+    ? ctx.menu_names.filter((n: unknown) => typeof n === "string" && n.trim())
+    : [];
+  if (menuNames.length) {
+    lines.push(
+      `Menus offered: ${menuNames.join(", ")}. ` +
+        "When relevant, you may tell the guest which menu a dish appears on.",
+    );
+  }
+
   add("About", ctx.story);
   add("Address", ctx.address);
   add("Phone", ctx.phone);
@@ -119,33 +131,40 @@ async function askOpenAI(opts: {
   context: string;
   conciergeName: string;
   restaurantName: string;
-  tone?: string;
+  persona?: string;
+  answerLength?: string;
+  customInstructions?: string;
   history: HistoryItem[];
   question: string;
 }): Promise<string> {
-  const toneLine =
-    opts.tone === "casual"
-      ? "Speak casually and warmly, like a friendly neighborhood spot — relaxed, upbeat, and approachable."
-      : opts.tone === "formal"
-        ? "Speak with polished, refined hospitality, like an upscale fine-dining maître d' — gracious and composed."
-        : "Speak warmly and professionally — friendly but composed.";
+  const persona = personaById(opts.persona);
+  const length = answerLengthById(opts.answerLength);
+  const custom = (opts.customInstructions || "").trim().slice(0, 1000);
 
-  const system =
-    `You are ${opts.conciergeName || "the concierge"}, the AI host for ${opts.restaurantName || "this restaurant"} — a gracious host who genuinely loves welcoming guests.\n\n` +
+  let system =
+    `You are ${opts.conciergeName || "the concierge"}, the AI host for ${opts.restaurantName || "this restaurant"}.\n\n` +
     "Voice & style:\n" +
-    `- ${toneLine}\n` +
+    `- Be ${persona.voice}\n` +
+    `- ${length.instruction}\n` +
     "- Be personable and genuinely engaging — never robotic or curt.\n" +
-    "- Write 2-4 flowing sentences (a touch longer when the guest clearly wants detail). Paint a small, inviting picture rather than a flat one-liner.\n" +
-    "- Open with a brief, friendly acknowledgement, then answer, then — when natural — a gentle next step or invitation (e.g. offer the reservation link, or suggest a dish).\n" +
-    "- An occasional tasteful emoji (✨🍷🥂🌿) is welcome when it fits; never overdo it. No markdown headings; keep any list to 3 items max.\n\n" +
+    "- Open with a brief acknowledgement, answer the question, then — when natural — offer a gentle next step (a reservation link, a dish suggestion).\n" +
+    "- No markdown headings; keep any list to 3 items max.\n\n" +
     "Accuracy:\n" +
-    "- Ground every fact in the RESTAURANT INFORMATION and MENU below; prefer the owner-provided Q&A when it fits.\n" +
+    "- Ground every fact in the RESTAURANT INFORMATION and MENUS below; prefer the owner-provided Q&A when it fits.\n" +
     "- When a guest wants to book, order, or cater, share the matching link if provided.\n" +
     "- If a specific detail isn't given, say so gracefully and offer to connect them with the restaurant — never invent prices, hours, or dishes.\n" +
     "- For severe-allergy questions, be careful: share what's known and always advise notifying staff on arrival.\n" +
-    "- Recommend popular or fitting dishes when it helps, drawn only from the menu/info. Match the guest's language.\n\n" +
-    "=== RESTAURANT INFORMATION ===\n" +
-    opts.context;
+    "- Recommend fitting dishes when it helps, drawn only from the menu/info. Match the guest's language.";
+
+  if (custom) {
+    // Owner's custom instructions are a strong steer, but must never override the
+    // accuracy rules above (don't invent facts, respect safety).
+    system +=
+      "\n\nOwner's custom instructions (follow closely, but never contradict the accuracy rules):\n" +
+      custom;
+  }
+
+  system += "\n\n=== RESTAURANT INFORMATION ===\n" + opts.context;
 
   const messages = [
     { role: "system", content: system },
@@ -159,7 +178,7 @@ async function askOpenAI(opts: {
       "Content-Type": "application/json",
       Authorization: `Bearer ${opts.apiKey}`,
     },
-    body: JSON.stringify({ model: opts.model, messages, temperature: 0.6, max_tokens: 600 }),
+    body: JSON.stringify({ model: opts.model, messages, temperature: 0.6, max_tokens: length.maxTokens }),
   });
 
   if (!resp.ok) {
@@ -216,18 +235,20 @@ export const Route = createFileRoute("/api/concierge")({
         }
 
         // Usage gate (guest messages only — owner previews are always free).
-        // Beta: every restaurant gets 100 guest messages / month, always
-        // enforced. The paid/free-trial gate only runs when BILLING_ENABLED.
-        // When a limit is hit we reply gracefully WITHOUT calling OpenAI or
-        // logging (which would burn more usage).
-        if (!isPreview) {
+        // Model: free plan = 50 guest messages / month, paid plans = unlimited.
+        // When the free allowance is spent we reply gracefully WITHOUT calling
+        // OpenAI or logging (which would burn more usage); the owner upgrades
+        // from their dashboard.
+        // Paywall is OFF while BILLING_ENABLED is false: the concierge answers
+        // every guest for free (usage is still logged for analytics). Flip the
+        // flag in src/lib/flags.ts to re-enable the monthly cap + upgrade flow.
+        if (!isPreview && BILLING_ENABLED) {
           const { data: usageData } = await supabase.rpc("get_usage", {
             p_restaurant_id: restaurantId,
           });
           const usage =
-            (usageData as { allowed?: boolean; reason?: string; beta_allowed?: boolean } | null) ?? null;
+            (usageData as { beta_allowed?: boolean } | null) ?? null;
 
-          // Beta monthly cap (100/month) — always on.
           if (usage && usage.beta_allowed === false) {
             return json({
               answer:
@@ -238,27 +259,24 @@ export const Route = createFileRoute("/api/concierge")({
               reason: "month",
             });
           }
-
-          // Paid / free-trial gate (only while billing is enabled).
-          if (BILLING_ENABLED && usage && usage.allowed === false) {
-            const answer =
-              usage.reason === "daily"
-                ? `Thanks for stopping by! ${ctx.name}'s AI concierge has answered all it can ` +
-                  `for today — please check back tomorrow, or reach out to the restaurant directly. ✨`
-                : `Thanks so much for stopping by! ${ctx.name}'s AI concierge has reached its free ` +
-                  `limit for now. Please reach out to the restaurant directly and they'll be ` +
-                  `delighted to help. ✨`;
-            return json({ answer, limited: true, reason: usage.reason ?? "trial" });
-          }
         }
 
         const apiKey = process.env.OPENAI_API_KEY;
         const model = process.env.OPENAI_MODEL || "gpt-4.1-mini";
 
         // RAG: embed the question and retrieve the most relevant menu chunks.
-        // Falls back to the full menu text if retrieval yields nothing.
+        // Cost optimization: only spend an embeddings call when the restaurant
+        // actually has menu content to search; otherwise skip straight to the
+        // profile + Q&A context.
+        // Only spend an embeddings call when there is actual menu CONTENT to
+        // search. ctx.menus only includes menus with non-empty text, so an empty
+        // "Add a menu" placeholder won't trigger wasted retrieval calls.
+        const hasMenu =
+          (Array.isArray(ctx.menus) && ctx.menus.length > 0) ||
+          (typeof ctx.menu_text === "string" && ctx.menu_text.trim() !== "");
+
         let menuContext = "";
-        if (apiKey) {
+        if (apiKey && hasMenu) {
           try {
             const [qEmbedding] = await embedTexts(apiKey, [question]);
             const { data: matches } = await supabase.rpc("match_menu_chunks", {
@@ -273,12 +291,21 @@ export const Route = createFileRoute("/api/concierge")({
             console.error("[concierge] retrieval error:", err);
           }
         }
-        if (!menuContext && typeof ctx.menu_text === "string" && ctx.menu_text.trim()) {
-          menuContext = ctx.menu_text;
+        // Fallback grounding when retrieval is empty: labeled menu text per menu.
+        if (!menuContext) {
+          const menus: Array<{ name?: string; text?: string }> = Array.isArray(ctx.menus) ? ctx.menus : [];
+          if (menus.length) {
+            menuContext = menus
+              .filter((m) => m && typeof m.text === "string" && m.text.trim())
+              .map((m) => `[${(m.name || "Menu").trim()}]\n${m.text}`)
+              .join("\n\n");
+          } else if (typeof ctx.menu_text === "string" && ctx.menu_text.trim()) {
+            menuContext = ctx.menu_text;
+          }
         }
 
         let context = buildContextPrompt(ctx);
-        if (menuContext) context += "\n\n=== MENU (most relevant excerpts) ===\n" + menuContext;
+        if (menuContext) context += "\n\n=== MENUS (most relevant excerpts) ===\n" + menuContext;
 
         // Generate an answer (or a graceful fallback if the key isn't set yet).
         let answer: string;
@@ -294,7 +321,9 @@ export const Route = createFileRoute("/api/concierge")({
               context,
               conciergeName: ctx.concierge_name,
               restaurantName: ctx.name,
-              tone: ctx.bot_tone,
+              persona: ctx.ai_persona,
+              answerLength: ctx.ai_answer_length,
+              customInstructions: ctx.ai_custom_instructions,
               history,
               question,
             });
