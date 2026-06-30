@@ -1160,8 +1160,20 @@ function QASection({ restaurantId }: { restaurantId: string }) {
   const importFile = async (file: File) => {
     setImporting(true);
     try {
-      const text = await file.text();
-      const pairs = extractQA(parseDelimited(text)).slice(0, 300);
+      let rows: string[][];
+      const isXlsx = /\.xlsx$/i.test(file.name) || file.type.includes("spreadsheetml");
+      if (isXlsx) {
+        // Real Excel: parse the .xlsx in the browser (lazy-loaded so it never
+        // weighs down the main bundle). Coerce every cell to a string.
+        const readXlsxFile = (await import("read-excel-file/browser")).default;
+        // With no schema the reader returns the first sheet as an array of rows
+        // (each row an array of cells). Coerce every cell to a string.
+        const raw = (await readXlsxFile(file)) as unknown as unknown[][];
+        rows = raw.map((row) => row.map((cell) => (cell == null ? "" : String(cell))));
+      } else {
+        rows = parseDelimited(await file.text());
+      }
+      const pairs = extractQA(rows).slice(0, 300);
       if (!pairs.length) {
         toast.error("No question/answer rows found. Use two columns titled Question and Answer.");
         return;
@@ -1211,7 +1223,7 @@ function QASection({ restaurantId }: { restaurantId: string }) {
           Import from spreadsheet
           <input
             type="file"
-            accept=".csv,.tsv,.txt,text/csv,text/tab-separated-values"
+            accept=".xlsx,.csv,.tsv,.txt,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv,text/tab-separated-values"
             className="hidden"
             disabled={importing}
             onChange={(e) => { const f = e.target.files?.[0]; if (f) importFile(f); e.target.value = ""; }}
@@ -1222,7 +1234,7 @@ function QASection({ restaurantId }: { restaurantId: string }) {
         <FileSpreadsheet className="mt-0.5 h-3.5 w-3.5 shrink-0 text-zinc-400" />
         <span>
           <span className="font-medium text-zinc-600">Spreadsheet format:</span> two columns — the first headed <strong>Question</strong> (or Q),
-          the second <strong>Answer</strong> (or A). In Excel or Google Sheets just choose <em>File → Save As / Download → CSV</em>, then upload it here.
+          the second <strong>Answer</strong> (or A). Upload an <strong>Excel (.xlsx)</strong> file directly, or a <strong>CSV</strong> — the first row of headers is optional.
         </span>
       </div>
 
