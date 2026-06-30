@@ -90,6 +90,47 @@ export type Database = {
           },
         ]
       }
+      menus: {
+        Row: {
+          created_at: string
+          file_path: string | null
+          id: string
+          menu_text: string | null
+          name: string
+          restaurant_id: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          file_path?: string | null
+          id?: string
+          menu_text?: string | null
+          name?: string
+          restaurant_id: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          file_path?: string | null
+          id?: string
+          menu_text?: string | null
+          name?: string
+          restaurant_id?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "menus_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       qa_pairs: {
         Row: {
           answer: string
@@ -167,6 +208,9 @@ export type Database = {
         Row: {
           action_buttons: Json | null
           address: string | null
+          ai_answer_length: string
+          ai_custom_instructions: string | null
+          ai_persona: string
           allergens: string[] | null
           allergy_info: string | null
           bot_tone: string | null
@@ -224,6 +268,9 @@ export type Database = {
         Insert: {
           action_buttons?: Json | null
           address?: string | null
+          ai_answer_length?: string
+          ai_custom_instructions?: string | null
+          ai_persona?: string
           allergens?: string[] | null
           allergy_info?: string | null
           bot_tone?: string | null
@@ -281,6 +328,9 @@ export type Database = {
         Update: {
           action_buttons?: Json | null
           address?: string | null
+          ai_answer_length?: string
+          ai_custom_instructions?: string | null
+          ai_persona?: string
           allergens?: string[] | null
           allergy_info?: string | null
           bot_tone?: string | null
@@ -342,6 +392,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      adopt_legacy_menus: {
+        Args: { p_restaurant_id: string }
+        Returns: undefined
+      }
       get_concierge_context: {
         Args: { p_restaurant_id: string }
         Returns: Json

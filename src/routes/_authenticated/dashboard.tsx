@@ -6,8 +6,9 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { extractPdfText, ingestMenu } from "@/lib/pdf-client";
+import { extractPdfText, ingestNamedMenu } from "@/lib/pdf-client";
 import { BILLING_ENABLED } from "@/lib/flags";
+import { PERSONAS, ANSWER_LENGTHS, type PersonaId, type AnswerLengthId } from "@/lib/ai-persona";
 import { LogoCropper } from "@/components/logo-cropper";
 import {
   Utensils, FileText, Check, Sparkles, Copy, Pencil, LogOut, Loader2, AlertCircle,
@@ -15,6 +16,7 @@ import {
   Palette, Clock, TrendingUp, Hash, Send, RotateCcw, Store, Code2,
   Image as ImageIcon, ArrowUpRight, Link2, Zap, CreditCard, Crown, Megaphone,
   Phone, Mail, Globe, MapPin, Car, Truck, Bell, BellRing, ShieldCheck,
+  Wand2, FileSpreadsheet, BookOpen,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -154,11 +156,12 @@ function Dashboard() {
 
             <section id="concierge" className="scroll-mt-24 space-y-6">
               <AppearanceCard r={r} onSaved={patch} />
+              <AIPersonalityCard r={r} onSaved={patch} />
               <ConciergeTester r={r} />
             </section>
 
             <section id="menu" className="scroll-mt-24 space-y-6">
-              <MenuCard r={r} onUpdated={(path) => patch({ menu_pdf_path: path })} />
+              <MenusCard r={r} />
               <QASection restaurantId={r.id} />
             </section>
 
@@ -192,7 +195,7 @@ type Section = { id: string; label: string; icon: typeof Store };
 const ALL_SECTIONS: Section[] = [
   { id: "profile", label: "Restaurant Profile", icon: Store },
   { id: "concierge", label: "Chatbot & Preview", icon: Sparkles },
-  { id: "menu", label: "Menu & Q&A", icon: FileText },
+  { id: "menu", label: "Menus & Q&A", icon: FileText },
   { id: "history", label: "Guest Questions", icon: MessageSquare },
   { id: "usage", label: "Plan & Usage", icon: Zap },
   { id: "install", label: "Install Widget", icon: Code2 },
@@ -557,36 +560,34 @@ function AppearanceCard({ r, onSaved }: { r: any; onSaved: (fields: Record<strin
                 <Button size="sm" variant="ghost" onClick={addAction} className="rounded-full"><Plus className="mr-1 h-3.5 w-3.5" /> Add</Button>
               )}
             </div>
-            <p className="mt-1 text-xs text-zinc-500">Each becomes a clickable picture-card in the chat that opens its link.</p>
-            <div className="mt-3 space-y-3">
+            <p className="mt-1 text-xs text-zinc-500">Each becomes a clickable button in the chat that opens its link.</p>
+            <div className="mt-3 space-y-2">
               {actions.map((a, i) => (
-                <div key={i} className="rounded-2xl border border-zinc-200 p-3">
-                  <div className="flex items-start gap-3">
-                    {/* Image / upload thumb */}
-                    <label className="group relative grid h-14 w-14 shrink-0 cursor-pointer place-items-center overflow-hidden rounded-xl border border-zinc-200 bg-zinc-50">
-                      {a.image ? (
-                        <img src={a.image} alt="" className="h-full w-full object-cover" />
-                      ) : (
-                        <div className="grid h-full w-full place-items-center text-white" style={{ background: `linear-gradient(135deg, ${form.brand_color}, rgba(0,0,0,.3))` }}>
-                          <ImageIcon className="h-5 w-5 opacity-90" />
-                        </div>
-                      )}
-                      <span className="absolute inset-0 hidden place-items-center bg-black/40 text-[10px] font-medium text-white group-hover:grid">Change</span>
-                      <input type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadImage(i, f); }} />
-                    </label>
-
-                    <div className="min-w-0 flex-1 space-y-2">
-                      <Input className="h-9 rounded-lg" placeholder="Button name (e.g. Reserve a Table)" value={a.label} onChange={(e) => setAction(i, { label: e.target.value })} />
-                      <div className="flex items-center gap-1.5 rounded-lg border border-zinc-200 px-2">
-                        <Link2 className="h-3.5 w-3.5 shrink-0 text-zinc-500" />
-                        <input className="h-8 w-full bg-transparent text-sm outline-none" placeholder="https://link-to-open.com" value={a.url} onChange={(e) => setAction(i, { url: e.target.value })} />
+                <div key={i} className="flex items-center gap-2.5 rounded-xl border border-zinc-200 p-2">
+                  {/* Image / upload thumb */}
+                  <label className="group relative grid h-10 w-10 shrink-0 cursor-pointer place-items-center overflow-hidden rounded-lg border border-zinc-200 bg-zinc-50">
+                    {a.image ? (
+                      <img src={a.image} alt="" className="h-full w-full object-cover" />
+                    ) : (
+                      <div className="grid h-full w-full place-items-center text-white" style={{ background: `linear-gradient(135deg, ${form.brand_color}, rgba(0,0,0,.3))` }}>
+                        <ImageIcon className="h-4 w-4 opacity-90" />
                       </div>
-                    </div>
+                    )}
+                    <span className="absolute inset-0 hidden place-items-center bg-black/40 text-[9px] font-medium text-white group-hover:grid">Edit</span>
+                    <input type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadImage(i, f); }} />
+                  </label>
 
-                    <button onClick={() => removeAction(i)} className="shrink-0 rounded-full p-1.5 text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900" aria-label="Remove button">
-                      <Trash2 className="h-4 w-4" />
-                    </button>
+                  <div className="grid min-w-0 flex-1 gap-1.5 sm:grid-cols-2">
+                    <Input className="h-8 rounded-lg text-sm" placeholder="Button name" value={a.label} onChange={(e) => setAction(i, { label: e.target.value })} />
+                    <div className="flex items-center gap-1.5 rounded-lg border border-zinc-200 px-2">
+                      <Link2 className="h-3.5 w-3.5 shrink-0 text-zinc-500" />
+                      <input className="h-7 w-full bg-transparent text-sm outline-none" placeholder="https://link…" value={a.url} onChange={(e) => setAction(i, { url: e.target.value })} />
+                    </div>
                   </div>
+
+                  <button onClick={() => removeAction(i)} className="shrink-0 rounded-full p-1.5 text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900" aria-label="Remove button">
+                    <Trash2 className="h-4 w-4" />
+                  </button>
                 </div>
               ))}
               {actions.length === 0 && (
@@ -608,6 +609,126 @@ function AppearanceCard({ r, onSaved }: { r: any; onSaved: (fields: Record<strin
           </div>
         </div>
       </div>
+    </Card>
+  );
+}
+
+/* --------------------- AI personality customization --------------------- */
+
+const PERSONA_ICONS: Record<PersonaId, typeof Sparkles> = {
+  warm_host: Sparkles,
+  refined_maitre: Crown,
+  playful_foodie: Wand2,
+  efficient_pro: Zap,
+  luxury_concierge: Sparkle,
+};
+
+const AI_INSTRUCTIONS_MAX = 1000;
+
+function AIPersonalityCard({ r, onSaved }: { r: any; onSaved: (fields: Record<string, any>) => void }) {
+  const [persona, setPersona] = useState<PersonaId>((r.ai_persona as PersonaId) || "warm_host");
+  const [length, setLength] = useState<AnswerLengthId>((r.ai_answer_length as AnswerLengthId) || "balanced");
+  const [custom, setCustom] = useState<string>(r.ai_custom_instructions || "");
+  const [saving, setSaving] = useState(false);
+
+  const save = async () => {
+    setSaving(true);
+    const payload = {
+      ai_persona: persona,
+      ai_answer_length: length,
+      ai_custom_instructions: custom.trim().slice(0, AI_INSTRUCTIONS_MAX) || null,
+    };
+    const { error } = await supabase.from("restaurants").update(payload).eq("id", r.id);
+    setSaving(false);
+    if (error) { toast.error(error.message); return; }
+    onSaved(payload);
+    toast.success("AI personality saved");
+  };
+
+  return (
+    <Card title="AI Personality">
+      <p className="text-sm text-zinc-500">
+        Shape how your concierge sounds and how much it says. Changes apply to the tester below and your live widget.
+      </p>
+
+      {/* Personality presets */}
+      <div className="mt-6">
+        <div className="mb-3 text-[11px] font-semibold uppercase tracking-[0.1em] text-zinc-400">Personality</div>
+        <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
+          {PERSONAS.map((p) => {
+            const Icon = PERSONA_ICONS[p.id];
+            const on = persona === p.id;
+            return (
+              <button
+                key={p.id}
+                type="button"
+                onClick={() => setPersona(p.id)}
+                className={cn(
+                  "flex items-start gap-3 rounded-2xl border p-4 text-left transition",
+                  on ? "border-[#c2410c] bg-[#ffedd5] ring-1 ring-[#c2410c]" : "border-zinc-200 hover:bg-zinc-50",
+                )}
+              >
+                <div className={cn("grid h-9 w-9 shrink-0 place-items-center rounded-xl", on ? "bg-[#c2410c] text-white" : "bg-zinc-100 text-zinc-500")}>
+                  <Icon className="h-4 w-4" />
+                </div>
+                <div className="min-w-0">
+                  <div className={cn("text-sm font-semibold", on ? "text-[#c2410c]" : "text-zinc-800")}>{p.label}</div>
+                  <div className={cn("text-xs leading-tight", on ? "text-[#c2410c]/80" : "text-zinc-500")}>{p.tagline}</div>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Answer length */}
+      <div className="mt-6">
+        <div className="mb-3 text-[11px] font-semibold uppercase tracking-[0.1em] text-zinc-400">Answer length</div>
+        <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
+          {ANSWER_LENGTHS.map((l) => {
+            const on = length === l.id;
+            return (
+              <button
+                key={l.id}
+                type="button"
+                onClick={() => setLength(l.id)}
+                className={cn(
+                  "rounded-xl border p-3 text-left transition",
+                  on ? "border-[#c2410c] bg-[#ffedd5]" : "border-zinc-200 hover:bg-zinc-50",
+                )}
+              >
+                <div className={cn("text-sm font-semibold", on ? "text-[#c2410c]" : "text-zinc-800")}>{l.label}</div>
+                <div className={cn("mt-0.5 text-[11px] leading-tight", on ? "text-[#c2410c]/80" : "text-zinc-500")}>{l.desc}</div>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Custom instructions */}
+      <div className="mt-6">
+        <div className="mb-2 flex items-center justify-between">
+          <div className="text-[11px] font-semibold uppercase tracking-[0.1em] text-zinc-400">Custom instructions <span className="font-normal normal-case tracking-normal text-zinc-400">(optional)</span></div>
+          <span className={cn("text-[11px] tabular-nums", custom.length >= AI_INSTRUCTIONS_MAX ? "font-semibold text-red-500" : "font-medium text-zinc-500")}>
+            {custom.length}/{AI_INSTRUCTIONS_MAX}
+          </span>
+        </div>
+        <Textarea
+          value={custom}
+          maxLength={AI_INSTRUCTIONS_MAX}
+          onChange={(e) => setCustom(e.target.value)}
+          placeholder="Anything specific you want your concierge to know or do — e.g. “Always mention our happy hour 4–6pm. Never discuss competitors. If asked about gluten-free, point to the GF menu and suggest the grilled salmon.”"
+          className="min-h-[120px] rounded-2xl"
+        />
+        <p className="mt-2 flex items-start gap-1.5 text-xs text-zinc-400">
+          <ShieldCheck className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+          These guide your concierge's tone and priorities — but it still won't invent prices, hours, or dishes that aren't in your menus or profile.
+        </p>
+      </div>
+
+      <Button onClick={save} disabled={saving} className="mt-6 rounded-full bg-gradient-hero text-white hover:opacity-90">
+        {saving ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <Wand2 className="mr-1.5 h-3.5 w-3.5" />} Save personality
+      </Button>
     </Card>
   );
 }
@@ -762,107 +883,245 @@ function ConciergeTester({ r }: { r: any }) {
   );
 }
 
-/* ------------------------------- Menu (RAG) -------------------------------- */
+/* ----------------------------- Menus (multi, RAG) ---------------------------- */
 
-function MenuCard({ r, onUpdated }: { r: any; onUpdated: (path: string) => void }) {
-  const [busy, setBusy] = useState(false);
+type MenuRow = {
+  id: string;
+  name: string;
+  file_path: string | null;
+  menu_text: string | null;
+  sort_order: number;
+};
+
+function MenusCard({ r }: { r: any }) {
+  const [menus, setMenus] = useState<MenuRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [busyId, setBusyId] = useState<string | null>(null);
   const [status, setStatus] = useState("");
-  const [chunks, setChunks] = useState<number | null>(null);
+  const [adding, setAdding] = useState(false);
 
-  const loadChunks = async () => {
-    const { count } = await supabase
-      .from("menu_chunks")
-      .select("*", { count: "exact", head: true })
-      .eq("restaurant_id", r.id);
-    setChunks(count ?? 0);
+  const load = async () => {
+    // Bring any legacy single-menu data into the menus table the first time.
+    // This runs atomically + idempotently server-side (advisory-locked, owner-
+    // checked), so concurrent tabs/devices can't duplicate or half-migrate it.
+    if (r.menu_pdf_path || r.menu_text || r.catering_menu_pdf_path) {
+      await supabase.rpc("adopt_legacy_menus", { p_restaurant_id: r.id });
+    }
+    const { data } = await supabase
+      .from("menus")
+      .select("id, name, file_path, menu_text, sort_order")
+      .eq("restaurant_id", r.id)
+      .order("sort_order")
+      .order("created_at");
+    setMenus(data || []);
+    setLoading(false);
   };
-  useEffect(() => { loadChunks(); /* eslint-disable-next-line */ }, [r.id]);
 
-  const replace = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setBusy(true);
+  useEffect(() => { load(); /* eslint-disable-next-line */ }, [r.id]);
+
+  const rename = async (id: string, name: string) => {
+    setMenus((ms) => ms.map((m) => (m.id === id ? { ...m, name } : m)));
+  };
+  const commitName = async (id: string, name: string) => {
+    const clean = name.trim() || "Menu";
+    await supabase.from("menus").update({ name: clean }).eq("id", id);
+  };
+
+  const addMenu = async () => {
+    setAdding(true);
+    const { data, error } = await supabase
+      .from("menus")
+      .insert({ restaurant_id: r.id, name: `Menu ${menus.length + 1}`, sort_order: menus.length })
+      .select("id, name, file_path, menu_text, sort_order")
+      .single();
+    setAdding(false);
+    if (error) { toast.error(error.message); return; }
+    if (data) setMenus((ms) => [...ms, data]);
+  };
+
+  const upload = async (menu: MenuRow, file: File) => {
+    setBusyId(menu.id);
     try {
       setStatus("Uploading…");
-      const safeName = file.name.replace(/[^a-zA-Z0-9.-]/g, "_");
-      const filePath = `${r.user_id}/${Date.now()}-${safeName}`;
+      const filePath = storagePath(r.user_id, "menu", file);
       const up = await supabase.storage.from("menus").upload(filePath, file, { upsert: true });
       if (up.error) throw up.error;
-      const { error } = await supabase.from("restaurants").update({ menu_pdf_path: filePath }).eq("id", r.id);
-      if (error) throw error;
-      onUpdated(filePath);
+      await supabase.from("menus").update({ file_path: filePath }).eq("id", menu.id);
+      setMenus((ms) => ms.map((m) => (m.id === menu.id ? { ...m, file_path: filePath } : m)));
 
       setStatus("Reading menu…");
       const text = await extractPdfText(file);
       if (!text.trim()) {
-        toast.message("Menu uploaded, but no text was found (is it a scanned image?). The concierge will use your profile + Q&A.");
+        toast.message("Uploaded, but no text was found (a scanned image?). The concierge will rely on your profile + Q&A.");
         return;
       }
       setStatus("Teaching your concierge…");
-      const n = await ingestMenu(text, "menu");
-      setChunks(n);
-      toast.success(`Menu uploaded and indexed for AI (${n} sections).`);
+      const n = await ingestNamedMenu({ menuId: menu.id, name: menu.name, text });
+      setMenus((ms) => ms.map((m) => (m.id === menu.id ? { ...m, menu_text: text } : m)));
+      toast.success(`"${menu.name}" indexed for AI (${n} sections).`);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Menu upload failed");
     } finally {
-      setBusy(false);
+      setBusyId(null);
       setStatus("");
     }
   };
 
-  const remove = async () => {
-    const { error } = await supabase.from("restaurants").update({ menu_pdf_path: null, menu_text: null }).eq("id", r.id);
+  const remove = async (menu: MenuRow) => {
+    const { error } = await supabase.from("menus").delete().eq("id", menu.id);
     if (error) { toast.error(error.message); return; }
-    await supabase.from("menu_chunks").delete().eq("restaurant_id", r.id).eq("source", "menu");
-    setChunks(0);
-    onUpdated("");
+    await supabase.from("menu_chunks").delete().eq("restaurant_id", r.id).eq("source", menu.id);
+    setMenus((ms) => ms.filter((m) => m.id !== menu.id));
     toast.success("Menu removed");
   };
 
   return (
-    <Card title="Menu PDF">
+    <Card title="Menus">
       <p className="text-sm text-zinc-500">
-        Upload your menu and your concierge will read it — guests can ask about dishes, prices, and ingredients.
+        Add as many menus as you like — Dinner, Lunch, Brunch, Drinks, Catering. Give each a name and upload its PDF; your
+        concierge reads them all and can tell guests which menu a dish is on.
       </p>
-      <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-zinc-200 bg-zinc-50 p-4">
-        <div className="flex min-w-0 items-center gap-3">
-          <FileText className="h-5 w-5 shrink-0 text-zinc-700" />
-          <span className="truncate text-sm">
-            {r.menu_pdf_path ? r.menu_pdf_path.split("/").pop() : <span className="text-zinc-500">No menu uploaded</span>}
-          </span>
-        </div>
-        <div className="flex items-center gap-2">
-          <label className={cn(
-            "inline-flex cursor-pointer items-center rounded-full border border-zinc-200 bg-white px-3 py-1.5 text-xs font-medium hover:bg-zinc-50",
-            busy && "pointer-events-none opacity-60",
-          )}>
-            {busy ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <Upload className="mr-1.5 h-3.5 w-3.5" />}
-            {busy ? (status || "Working…") : r.menu_pdf_path ? "Replace" : "Upload"}
-            <input type="file" accept="application/pdf" className="hidden" onChange={replace} disabled={busy} />
-          </label>
-          {r.menu_pdf_path && !busy && (
-            <button onClick={remove} className="rounded-full p-1.5 text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900" aria-label="Remove menu">
-              <Trash2 className="h-4 w-4" />
-            </button>
-          )}
-        </div>
-      </div>
-      {r.menu_pdf_path && chunks !== null && (
-        chunks > 0 ? (
-          <p className="mt-2 flex items-center gap-1.5 text-xs text-emerald-600">
-            <Sparkle className="h-3 w-3" /> Indexed for AI ({chunks} sections) — your concierge reads this menu.
-          </p>
+
+      <div className="mt-5 space-y-3">
+        {loading ? (
+          <div className="flex justify-center py-6"><Loader2 className="h-5 w-5 animate-spin text-zinc-500" /></div>
         ) : (
-          <p className="mt-2 flex items-center gap-1.5 text-xs text-[#c2410c]">
-            <AlertCircle className="h-3 w-3" /> Uploaded but not indexed yet. Click <strong>Replace</strong> and re-select your menu PDF to let the AI read it.
-          </p>
-        )
-      )}
+          menus.map((menu) => {
+            const busy = busyId === menu.id;
+            const indexed = !!(menu.menu_text && menu.menu_text.trim());
+            return (
+              <div key={menu.id} className="rounded-2xl border border-zinc-200 p-4">
+                {/* Title spans left→right */}
+                <div className="flex items-center gap-2">
+                  <BookOpen className="h-4 w-4 shrink-0 text-zinc-400" />
+                  <input
+                    className="h-9 w-full rounded-lg border border-transparent bg-transparent px-1 text-sm font-semibold outline-none transition focus:border-zinc-200 focus:bg-zinc-50"
+                    value={menu.name}
+                    onChange={(e) => rename(menu.id, e.target.value)}
+                    onBlur={(e) => commitName(menu.id, e.target.value)}
+                    placeholder="Menu name (e.g. Dinner Menu)"
+                  />
+                  <button onClick={() => remove(menu)} className="shrink-0 rounded-full p-1.5 text-zinc-400 hover:bg-zinc-100 hover:text-zinc-900" aria-label="Remove menu">
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
+
+                {/* Upload option beneath */}
+                <div className="mt-3 flex flex-wrap items-center gap-3 rounded-xl border border-zinc-200 bg-zinc-50 p-3">
+                  <div className="flex min-w-0 flex-1 items-center gap-2.5">
+                    <FileText className="h-4 w-4 shrink-0 text-zinc-500" />
+                    <span className="truncate text-xs text-zinc-600">
+                      {menu.file_path ? menu.file_path.split("/").pop() : <span className="text-zinc-400">No file uploaded yet</span>}
+                    </span>
+                  </div>
+                  <label className={cn(
+                    "inline-flex cursor-pointer items-center rounded-full border border-zinc-200 bg-white px-3 py-1.5 text-xs font-medium hover:bg-zinc-50",
+                    busy && "pointer-events-none opacity-60",
+                  )}>
+                    {busy ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <Upload className="mr-1.5 h-3.5 w-3.5" />}
+                    {busy ? (status || "Working…") : menu.file_path ? "Replace PDF" : "Upload PDF"}
+                    <input
+                      type="file"
+                      accept="application/pdf"
+                      className="hidden"
+                      disabled={busy}
+                      onChange={(e) => { const f = e.target.files?.[0]; if (f) upload(menu, f); e.target.value = ""; }}
+                    />
+                  </label>
+                </div>
+
+                {menu.file_path && (
+                  indexed ? (
+                    <p className="mt-2 flex items-center gap-1.5 text-xs text-emerald-600">
+                      <Sparkle className="h-3 w-3" /> Indexed — your concierge reads this menu.
+                    </p>
+                  ) : (
+                    <p className="mt-2 flex items-center gap-1.5 text-xs text-[#c2410c]">
+                      <AlertCircle className="h-3 w-3" /> Uploaded but not readable yet. Click <strong>Replace PDF</strong> and re-select to index it.
+                    </p>
+                  )
+                )}
+              </div>
+            );
+          })
+        )}
+
+        {!loading && menus.length === 0 && (
+          <div className="flex flex-col items-center gap-2 py-8 text-center text-sm text-zinc-500">
+            <BookOpen className="h-6 w-6" />
+            No menus yet. Add your first one below.
+          </div>
+        )}
+      </div>
+
+      <Button onClick={addMenu} disabled={adding} variant="outline" className="mt-4 rounded-full border-zinc-200">
+        {adding ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <Plus className="mr-1.5 h-3.5 w-3.5" />} Add a menu
+      </Button>
     </Card>
   );
 }
 
 /* ------------------------------- Custom Q&A -------------------------------- */
+
+/**
+ * Parse CSV/TSV text into rows, honoring quoted fields and embedded newlines.
+ * Delimiter is auto-detected (tab if the header has tabs, else comma).
+ */
+function parseDelimited(text: string): string[][] {
+  const nl = text.indexOf("\n");
+  const firstLine = nl === -1 ? text : text.slice(0, nl);
+  const delim = firstLine.indexOf("\t") !== -1 ? "\t" : ",";
+  const rows: string[][] = [];
+  let field = "";
+  let row: string[] = [];
+  let inQuotes = false;
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (inQuotes) {
+      if (ch === '"') {
+        if (text[i + 1] === '"') { field += '"'; i++; }
+        else inQuotes = false;
+      } else field += ch;
+    } else if (ch === '"') {
+      inQuotes = true;
+    } else if (ch === delim) {
+      row.push(field); field = "";
+    } else if (ch === "\n") {
+      row.push(field); rows.push(row); row = []; field = "";
+    } else if (ch !== "\r") {
+      field += ch;
+    }
+  }
+  if (field.length > 0 || row.length > 0) { row.push(field); rows.push(row); }
+  return rows.filter((r) => r.some((c) => c.trim() !== ""));
+}
+
+const isQHeader = (h: string) => /^q(uestion)?s?$/i.test(h.trim());
+const isAHeader = (h: string) => /^a(nswer)?s?$/i.test(h.trim());
+
+/** Pull {question, answer} pairs out of parsed spreadsheet rows. */
+function extractQA(rows: string[][]): { question: string; answer: string }[] {
+  if (!rows.length) return [];
+  const header = rows[0].map((h) => (h || "").trim());
+  let qi = header.findIndex(isQHeader);
+  let ai = header.findIndex(isAHeader);
+  let start = 0;
+  if (qi !== -1 && ai !== -1) {
+    start = 1;
+  } else {
+    // No recognizable header — assume column 1 = question, column 2 = answer,
+    // and skip the first row if it looks like a header.
+    qi = 0; ai = 1;
+    if (header.slice(0, 2).some((h) => isQHeader(h) || isAHeader(h))) start = 1;
+  }
+  const out: { question: string; answer: string }[] = [];
+  for (let i = start; i < rows.length; i++) {
+    const q = (rows[i][qi] || "").trim().slice(0, 500);
+    const a = (rows[i][ai] || "").trim().slice(0, 2000);
+    if (q && a) out.push({ question: q, answer: a });
+  }
+  return out;
+}
 
 function QASection({ restaurantId }: { restaurantId: string }) {
   const [items, setItems] = useState<QA[]>([]);
@@ -870,6 +1129,7 @@ function QASection({ restaurantId }: { restaurantId: string }) {
   const [q, setQ] = useState("");
   const [a, setA] = useState("");
   const [saving, setSaving] = useState(false);
+  const [importing, setImporting] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editQ, setEditQ] = useState("");
   const [editA, setEditA] = useState("");
@@ -897,6 +1157,30 @@ function QASection({ restaurantId }: { restaurantId: string }) {
     setQ(""); setA(""); toast.success("Q&A added"); load();
   };
 
+  const importFile = async (file: File) => {
+    setImporting(true);
+    try {
+      const text = await file.text();
+      const pairs = extractQA(parseDelimited(text)).slice(0, 300);
+      if (!pairs.length) {
+        toast.error("No question/answer rows found. Use two columns titled Question and Answer.");
+        return;
+      }
+      const base = items.length;
+      const payload = pairs.map((p, i) => ({
+        restaurant_id: restaurantId, question: p.question, answer: p.answer, sort_order: base + i,
+      }));
+      const { error } = await supabase.from("qa_pairs").insert(payload);
+      if (error) { toast.error(error.message); return; }
+      toast.success(`Imported ${pairs.length} Q&A ${pairs.length === 1 ? "pair" : "pairs"}.`);
+      load();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Couldn't read that file");
+    } finally {
+      setImporting(false);
+    }
+  };
+
   const startEdit = (item: QA) => { setEditingId(item.id); setEditQ(item.question); setEditA(item.answer); };
   const cancelEdit = () => { setEditingId(null); setEditQ(""); setEditA(""); };
 
@@ -915,9 +1199,32 @@ function QASection({ restaurantId }: { restaurantId: string }) {
 
   return (
     <Card title="Custom Q&A">
-      <p className="text-sm text-zinc-500">
-        Write your own questions and answers. Your concierge will prefer these when guests ask something similar.
-      </p>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <p className="max-w-xl text-sm text-zinc-500">
+          Write your own questions and answers. Your concierge will prefer these when guests ask something similar.
+        </p>
+        <label className={cn(
+          "inline-flex shrink-0 cursor-pointer items-center rounded-full border border-zinc-200 bg-white px-3.5 py-2 text-xs font-medium hover:bg-zinc-50",
+          importing && "pointer-events-none opacity-60",
+        )}>
+          {importing ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <FileSpreadsheet className="mr-1.5 h-3.5 w-3.5" />}
+          Import from spreadsheet
+          <input
+            type="file"
+            accept=".csv,.tsv,.txt,text/csv,text/tab-separated-values"
+            className="hidden"
+            disabled={importing}
+            onChange={(e) => { const f = e.target.files?.[0]; if (f) importFile(f); e.target.value = ""; }}
+          />
+        </label>
+      </div>
+      <div className="mt-3 flex items-start gap-2 rounded-xl border border-zinc-100 bg-zinc-50 p-3 text-xs leading-relaxed text-zinc-500">
+        <FileSpreadsheet className="mt-0.5 h-3.5 w-3.5 shrink-0 text-zinc-400" />
+        <span>
+          <span className="font-medium text-zinc-600">Spreadsheet format:</span> two columns — the first headed <strong>Question</strong> (or Q),
+          the second <strong>Answer</strong> (or A). In Excel or Google Sheets just choose <em>File → Save As / Download → CSV</em>, then upload it here.
+        </span>
+      </div>
 
       <div className="mt-5 space-y-3 rounded-2xl border border-zinc-200 bg-zinc-50 p-4">
         <Input placeholder="Question (e.g. Do you take walk-ins?)" value={q} onChange={(e) => setQ(e.target.value)} className="h-10 rounded-xl bg-white" />
@@ -1646,16 +1953,16 @@ function PreviewWidget({ r, actions }: { r: any; actions?: ActionBtn[] }) {
           {r.welcome_message || "Hello!"}
         </div>
         {list.length > 0 && (
-          <div className="grid grid-cols-3 gap-2 pt-1">
+          <div className="flex flex-wrap gap-2 pt-1">
             {list.map((b, i) => (
-              <div key={i} className="overflow-hidden rounded-xl border border-zinc-200">
-                <div
-                  className="grid h-11 place-items-center bg-cover bg-center text-white"
-                  style={b.image ? { backgroundImage: `url(${b.image})` } : { background: `linear-gradient(135deg, ${color}, rgba(0,0,0,.3))` }}
+              <div key={i} className="inline-flex max-w-full items-center gap-2 rounded-xl border border-zinc-200 bg-white py-1.5 pl-1.5 pr-3 text-xs font-semibold text-zinc-800">
+                <span
+                  className="grid h-6 w-6 shrink-0 place-items-center rounded-lg bg-cover bg-center text-white"
+                  style={b.image ? { backgroundImage: `url(${b.image})` } : { background: `linear-gradient(135deg, ${color}, rgba(0,0,0,.28))` }}
                 >
-                  {!b.image && <ArrowUpRight className="h-3.5 w-3.5" />}
-                </div>
-                <div className="truncate px-1.5 py-1 text-center text-[10px] font-medium">{b.label || "Button"}</div>
+                  {!b.image && <ArrowUpRight className="h-3 w-3" />}
+                </span>
+                <span className="truncate">{b.label || "Button"}</span>
               </div>
             ))}
           </div>

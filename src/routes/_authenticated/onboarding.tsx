@@ -109,7 +109,7 @@ function Onboarding() {
     setSaving(true);
     const payload: Record<string, any> = { ...form, onboarding_step: nextStep };
     if (completed) payload.onboarding_completed = true;
-    const { error } = await supabase.from("restaurants").update(payload).eq("user_id", userId);
+    const { error } = await supabase.from("restaurants").update(payload as never).eq("user_id", userId);
     setSaving(false);
     if (error) { toast.error(error.message); return false; }
     return true;
