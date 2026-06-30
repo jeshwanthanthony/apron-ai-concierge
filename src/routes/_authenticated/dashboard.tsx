@@ -136,7 +136,7 @@ function Dashboard() {
             <h1 className="text-4xl font-semibold tracking-tight sm:text-5xl">{r.name || "Your restaurant"}</h1>
             <p className="mt-2 text-lg text-zinc-500">{r.cuisine_type || "Welcome back"}</p>
           </div>
-          <UsageCard used={usage?.used_month ?? 0} limit={usage?.month_limit ?? 100} />
+          <UsageCard used={usage?.used_month ?? 0} limit={usage?.month_limit ?? 50} />
         </div>
 
         {/* Sticky section nav + content */}
@@ -496,56 +496,58 @@ function AppearanceCard({ r, onSaved }: { r: any; onSaved: (fields: Record<strin
 
           <Field label="Welcome message"><Textarea className="min-h-[72px] rounded-xl" value={form.welcome_message} onChange={(e) => set("welcome_message", e.target.value)} /></Field>
 
-          <Field label="Brand color">
-            <div className="space-y-3">
-              <div className="flex flex-wrap gap-2">
-                {PRESET_COLORS.map((c) => (
-                  <button
-                    key={c}
-                    type="button"
-                    onClick={() => set("brand_color", c)}
-                    className={cn(
-                      "h-8 w-8 rounded-full border-2 transition",
-                      form.brand_color.toLowerCase() === c.toLowerCase() ? "border-zinc-900 scale-110" : "border-transparent hover:scale-105",
-                    )}
-                    style={{ background: c }}
-                    aria-label={`Use ${c}`}
-                  />
-                ))}
+          <div className="grid gap-5 sm:grid-cols-2">
+            <Field label="Brand color">
+              <div className="space-y-3">
+                <div className="flex flex-wrap gap-2">
+                  {PRESET_COLORS.map((c) => (
+                    <button
+                      key={c}
+                      type="button"
+                      onClick={() => set("brand_color", c)}
+                      className={cn(
+                        "h-8 w-8 rounded-full border-2 transition",
+                        form.brand_color.toLowerCase() === c.toLowerCase() ? "border-zinc-900 scale-110" : "border-transparent hover:scale-105",
+                      )}
+                      style={{ background: c }}
+                      aria-label={`Use ${c}`}
+                    />
+                  ))}
+                </div>
+                <div className="flex items-center gap-3">
+                  <input type="color" value={form.brand_color} onChange={(e) => set("brand_color", e.target.value)} className="h-10 w-14 cursor-pointer rounded-xl border border-zinc-200 bg-transparent" />
+                  <Input className={cn(inputCls, "max-w-[140px]")} value={form.brand_color} onChange={(e) => set("brand_color", e.target.value)} />
+                  <Palette className="h-4 w-4 text-zinc-500" />
+                </div>
               </div>
-              <div className="flex items-center gap-3">
-                <input type="color" value={form.brand_color} onChange={(e) => set("brand_color", e.target.value)} className="h-10 w-14 cursor-pointer rounded-xl border border-zinc-200 bg-transparent" />
-                <Input className={cn(inputCls, "max-w-[140px]")} value={form.brand_color} onChange={(e) => set("brand_color", e.target.value)} />
-                <Palette className="h-4 w-4 text-zinc-500" />
-              </div>
-            </div>
-          </Field>
+            </Field>
 
-          <Field label="Bubble behavior">
-            <div className="grid grid-cols-2 gap-2.5">
-              {[
-                { id: "once", icon: Bell, title: "Standard", desc: "Greets once, then rests" },
-                { id: "always", icon: BellRing, title: "Attention-grabbing", desc: "Keeps pulsing & re-invites" },
-              ].map((opt) => {
-                const on = (form.launcher_pulse || "once") === opt.id;
-                return (
-                  <button
-                    key={opt.id}
-                    type="button"
-                    onClick={() => set("launcher_pulse", opt.id)}
-                    className={cn(
-                      "flex flex-col items-start gap-1 rounded-xl border p-3 text-left transition",
-                      on ? "border-[#c2410c] bg-[#ffedd5]" : "border-zinc-200 hover:bg-zinc-50",
-                    )}
-                  >
-                    <opt.icon className={cn("h-4 w-4", on ? "text-[#c2410c]" : "text-zinc-400")} />
-                    <span className={cn("text-sm font-semibold", on ? "text-[#c2410c]" : "text-zinc-800")}>{opt.title}</span>
-                    <span className={cn("text-[11px] leading-tight", on ? "text-[#c2410c]/80" : "text-zinc-400")}>{opt.desc}</span>
-                  </button>
-                );
-              })}
-            </div>
-          </Field>
+            <Field label="Bubble behavior">
+              <div className="grid grid-cols-2 gap-2.5">
+                {[
+                  { id: "once", icon: Bell, title: "Standard", desc: "Greets once, then rests" },
+                  { id: "always", icon: BellRing, title: "Attention-grabbing", desc: "Keeps pulsing & re-invites" },
+                ].map((opt) => {
+                  const on = (form.launcher_pulse || "once") === opt.id;
+                  return (
+                    <button
+                      key={opt.id}
+                      type="button"
+                      onClick={() => set("launcher_pulse", opt.id)}
+                      className={cn(
+                        "flex flex-col items-start gap-1 rounded-xl border p-3 text-left transition",
+                        on ? "border-[#c2410c] bg-[#ffedd5]" : "border-zinc-200 hover:bg-zinc-50",
+                      )}
+                    >
+                      <opt.icon className={cn("h-4 w-4", on ? "text-[#c2410c]" : "text-zinc-400")} />
+                      <span className={cn("text-sm font-semibold", on ? "text-[#c2410c]" : "text-zinc-800")}>{opt.title}</span>
+                      <span className={cn("text-[11px] leading-tight", on ? "text-[#c2410c]/80" : "text-zinc-400")}>{opt.desc}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </Field>
+          </div>
 
           {/* Action buttons */}
           <div>
@@ -1115,19 +1117,16 @@ function HistorySection({ restaurantId }: { restaurantId: string }) {
 
 /* ------------------------------ Plan & usage ------------------------------- */
 
-type PlanId = "free" | "pro_monthly" | "pro_annual";
+type PlanId = "free" | "pro_monthly" | "pro_quarterly" | "pro_annual";
 
 const PLAN_META: Record<PlanId, { name: string; badge: string }> = {
-  free: { name: "Free Trial", badge: "bg-zinc-100 text-zinc-600" },
+  free: { name: "Free", badge: "bg-zinc-100 text-zinc-600" },
   pro_monthly: { name: "Pro · Monthly", badge: "bg-[#ffedd5] text-[#c2410c]" },
+  pro_quarterly: { name: "Pro · Quarterly", badge: "bg-[#ffedd5] text-[#c2410c]" },
   pro_annual: { name: "Pro · Annual", badge: "bg-emerald-50 text-emerald-600" },
 };
 
-// Pro plans include a generous monthly message allowance (effectively
-// unlimited for a typical independent restaurant).
-const PRO_INCLUDED = 1500;
-
-type Usage = { plan: string; used: number; limit: number; used_today: number; daily_limit: number; allowed: boolean; reason: string | null };
+type Usage = { plan: string; used: number; limit: number; used_today: number; daily_limit: number; used_month: number; month_limit: number; beta_allowed: boolean; allowed: boolean; reason: string | null };
 
 function PlanUsageCard({ r, onSaved }: { r: any; onSaved: (fields: Record<string, any>) => void }) {
   const [usage, setUsage] = useState<Usage | null>(null);
@@ -1140,22 +1139,19 @@ function PlanUsageCard({ r, onSaved }: { r: any; onSaved: (fields: Record<string
   };
   useEffect(() => { loadUsage(); /* eslint-disable-next-line */ }, [r.id]);
 
-  const plan: PlanId = (["free", "pro_monthly", "pro_annual"].includes(r.plan) ? r.plan : "free") as PlanId;
+  const plan: PlanId = (["free", "pro_monthly", "pro_quarterly", "pro_annual"].includes(r.plan) ? r.plan : "free") as PlanId;
   const isFree = plan === "free";
-  const used = usage?.used ?? Number(r.messages_used ?? 0);
-  const freeLimit = usage?.limit ?? Number(r.free_message_limit ?? 20);
-  const usedToday = usage?.used_today ?? 0;
-  const dailyLimit = usage?.daily_limit ?? Number(r.daily_free_limit ?? 12);
-  const limit = isFree ? freeLimit : PRO_INCLUDED;
+  const used = usage?.used_month ?? 0;
+  const limit = usage?.month_limit ?? Number(r.monthly_message_limit ?? 50);
   const pct = Math.min(100, Math.round((used / Math.max(1, limit)) * 100));
   const remaining = Math.max(0, limit - used);
-  const out = isFree && usage ? usage.allowed === false : false;
-  const dailyReached = isFree && usage?.reason === "daily";
+  const out = isFree && usage ? usage.beta_allowed === false : false;
+  const dailyReached = false;
 
   const meterColor = out ? "#dc2626" : pct > 75 ? "#ea580c" : isFree ? "#c2410c" : "#16a34a";
 
   // Real billing: start a Stripe Checkout session and redirect to it.
-  const subscribe = async (target: PlanId) => {
+  const subscribe = async (target: PlanId, withSetup?: boolean) => {
     if (target === "free") return;
     setBusy(true);
     try {
@@ -1164,7 +1160,7 @@ function PlanUsageCard({ r, onSaved }: { r: any; onSaved: (fields: Record<string
       const res = await fetch("/api/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ plan: target }),
+        body: JSON.stringify({ plan: target, withSetup }),
       });
       const data = await res.json().catch(() => ({}));
       if (res.ok && data.url) {
@@ -1244,7 +1240,7 @@ function PlanUsageCard({ r, onSaved }: { r: any; onSaved: (fields: Record<string
 
         {isFree && (
           <div className="mt-3 flex items-center justify-between text-xs text-zinc-500">
-            <span>Today: <span className="font-medium text-zinc-700">{usedToday}</span> / {dailyLimit} daily</span>
+            <span>Resets on the 1st of each month</span>
             <span>Owner test chats are always free</span>
           </div>
         )}
@@ -1292,12 +1288,13 @@ const PLANS: Array<{
 }> = [
   {
     id: "pro_monthly",
-    name: "Pro",
-    price: "$19",
+    name: "Monthly",
+    price: "$29",
     cadence: "/month",
+    note: "Billed monthly · cancel anytime",
     features: [
       "Unlimited guest messages (fair use)",
-      "No daily caps",
+      "No monthly cap",
       "Reads your menu PDF (RAG)",
       "Unlimited custom Q&A",
       "Live guest-question analytics",
@@ -1305,27 +1302,41 @@ const PLANS: Array<{
     ],
   },
   {
+    id: "pro_quarterly",
+    name: "Quarterly",
+    price: "$79",
+    cadence: "/3 months",
+    note: "≈ $26.33/mo · save 9%",
+    features: [
+      "Everything in Monthly",
+      "Billed every 3 months",
+      "Lower effective rate",
+      "Priority email support",
+    ],
+  },
+  {
     id: "pro_annual",
-    name: "Pro Annual",
-    price: "$179",
+    name: "Annual",
+    price: "$290",
     cadence: "/year",
-    note: "Save 22% — ~$14.92/mo",
+    note: "≈ $24.17/mo · 2 months free",
     highlight: true,
     features: [
-      "Everything in Pro, billed yearly",
-      "2 months free vs monthly",
+      "Everything in Monthly",
+      "Best price — save 17%",
+      "Billed once a year",
       "Priority support",
-      "Lock in early-bird pricing",
     ],
   },
 ];
 
 function UpgradeModal({
   current, busy, onClose, onSelect,
-}: { current: PlanId; busy: boolean; onClose: () => void; onSelect: (p: PlanId) => void }) {
+}: { current: PlanId; busy: boolean; onClose: () => void; onSelect: (p: PlanId, withSetup?: boolean) => void }) {
+  const [withSetup, setWithSetup] = useState(false);
   return (
     <div className="fixed inset-0 z-50 grid place-items-center bg-zinc-900/40 p-4 backdrop-blur-sm" onClick={onClose}>
-      <div className="w-full max-w-2xl overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-2xl" onClick={(e) => e.stopPropagation()}>
+      <div className="max-h-[92vh] w-full max-w-3xl overflow-y-auto rounded-2xl border border-zinc-200 bg-white shadow-2xl" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-start justify-between border-b border-zinc-200 px-6 py-5">
           <div>
             <h3 className="text-xl font-semibold tracking-tight">Choose your plan</h3>
@@ -1334,7 +1345,7 @@ function UpgradeModal({
           <button onClick={onClose} className="rounded-full p-1.5 text-zinc-400 hover:bg-zinc-100 hover:text-zinc-900"><X className="h-4 w-4" /></button>
         </div>
 
-        <div className="grid gap-4 p-6 sm:grid-cols-2">
+        <div className="grid gap-4 p-6 sm:grid-cols-3">
           {PLANS.map((p) => {
             const isCurrent = current === p.id;
             return (
@@ -1362,7 +1373,7 @@ function UpgradeModal({
                   ))}
                 </ul>
                 <Button
-                  onClick={() => onSelect(p.id)}
+                  onClick={() => onSelect(p.id, withSetup)}
                   disabled={busy || isCurrent}
                   className={cn(
                     "mt-5 w-full rounded-full",
@@ -1375,6 +1386,24 @@ function UpgradeModal({
               </div>
             );
           })}
+        </div>
+
+        {/* Optional one-time white-glove setup add-on */}
+        <div className="px-6 pb-2">
+          <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-zinc-200 bg-zinc-50 p-4 transition hover:border-zinc-300">
+            <input
+              type="checkbox"
+              checked={withSetup}
+              onChange={(e) => setWithSetup(e.target.checked)}
+              className="mt-0.5 h-4 w-4 rounded border-zinc-300 text-[#c2410c] focus:ring-[#c2410c]"
+            />
+            <span className="text-sm">
+              <span className="font-semibold text-zinc-900">Add white-glove setup — one-time $99</span>
+              <span className="mt-0.5 block text-zinc-500">
+                We import your menu, write your custom Q&amp;A, match your brand colors &amp; logo, and install the widget on your site for you. Billed once on your first invoice.
+              </span>
+            </span>
+          </label>
         </div>
 
         <div className="border-t border-zinc-200 bg-zinc-50 px-6 py-3 text-center text-xs text-zinc-400">

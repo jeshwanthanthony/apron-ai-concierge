@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { ensureEnv, serverClient } from "@/lib/concierge-rag";
-import { stripeConfig, stripeRequest, type PaidPlan } from "@/lib/stripe";
+import { stripeConfig, stripeRequest, STRIPE_SETUP_FEE_PRICE, type PaidPlan } from "@/lib/stripe";
 
 /**
  * Owner-only endpoint that starts a Stripe Checkout subscription.
@@ -30,7 +30,7 @@ export const Route = createFileRoute("/api/checkout")({
         const token = authHeader && /^bearer /i.test(authHeader) ? authHeader.slice(7).trim() : null;
         if (!token) return json({ error: "Unauthorized" }, 401);
 
-        let body: { plan?: string };
+        let body: { plan?: string; withSetup?: boolean };
         try {
           body = await request.json();
         } catch {
@@ -38,11 +38,15 @@ export const Route = createFileRoute("/api/checkout")({
         }
 
         const plan = body.plan as PaidPlan;
-        if (plan !== "pro_monthly" && plan !== "pro_annual") {
+        if (plan !== "pro_monthly" && plan !== "pro_quarterly" && plan !== "pro_annual") {
           return json({ error: "Invalid plan" }, 400);
         }
         const priceId = cfg.prices[plan];
         if (!priceId) return json({ error: `No Stripe price configured for ${plan}` }, 503);
+
+        // Optional one-time setup fee, billed once on the first invoice.
+        const lineItems: Array<{ price: string; quantity: number }> = [{ price: priceId, quantity: 1 }];
+        if (body.withSetup) lineItems.push({ price: STRIPE_SETUP_FEE_PRICE, quantity: 1 });
 
         const supabase = serverClient(token);
         const { data: userData, error: userErr } = await supabase.auth.getUser(token);
@@ -78,7 +82,7 @@ export const Route = createFileRoute("/api/checkout")({
           customer: customerId,
           client_reference_id: restaurant.id,
           allow_promotion_codes: true,
-          "line_items": [{ price: priceId, quantity: 1 }],
+          "line_items": lineItems,
           subscription_data: { metadata: { restaurant_id: restaurant.id, plan } },
           metadata: { restaurant_id: restaurant.id, plan },
           success_url: `${origin}/dashboard?upgraded=1`,

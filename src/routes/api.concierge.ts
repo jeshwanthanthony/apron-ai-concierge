@@ -1,6 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { ensureEnv, serverClient, embedTexts, toVectorLiteral } from "@/lib/concierge-rag";
-import { BILLING_ENABLED } from "@/lib/flags";
 
 /**
  * Public AI concierge endpoint used by the embeddable widget.
@@ -216,18 +215,17 @@ export const Route = createFileRoute("/api/concierge")({
         }
 
         // Usage gate (guest messages only — owner previews are always free).
-        // Beta: every restaurant gets 100 guest messages / month, always
-        // enforced. The paid/free-trial gate only runs when BILLING_ENABLED.
-        // When a limit is hit we reply gracefully WITHOUT calling OpenAI or
-        // logging (which would burn more usage).
+        // Model: free plan = 50 guest messages / month, paid plans = unlimited.
+        // When the free allowance is spent we reply gracefully WITHOUT calling
+        // OpenAI or logging (which would burn more usage); the owner upgrades
+        // from their dashboard.
         if (!isPreview) {
           const { data: usageData } = await supabase.rpc("get_usage", {
             p_restaurant_id: restaurantId,
           });
           const usage =
-            (usageData as { allowed?: boolean; reason?: string; beta_allowed?: boolean } | null) ?? null;
+            (usageData as { beta_allowed?: boolean } | null) ?? null;
 
-          // Beta monthly cap (100/month) — always on.
           if (usage && usage.beta_allowed === false) {
             return json({
               answer:
@@ -237,18 +235,6 @@ export const Route = createFileRoute("/api/concierge")({
               limited: true,
               reason: "month",
             });
-          }
-
-          // Paid / free-trial gate (only while billing is enabled).
-          if (BILLING_ENABLED && usage && usage.allowed === false) {
-            const answer =
-              usage.reason === "daily"
-                ? `Thanks for stopping by! ${ctx.name}'s AI concierge has answered all it can ` +
-                  `for today — please check back tomorrow, or reach out to the restaurant directly. ✨`
-                : `Thanks so much for stopping by! ${ctx.name}'s AI concierge has reached its free ` +
-                  `limit for now. Please reach out to the restaurant directly and they'll be ` +
-                  `delighted to help. ✨`;
-            return json({ answer, limited: true, reason: usage.reason ?? "trial" });
           }
         }
 

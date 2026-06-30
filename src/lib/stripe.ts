@@ -9,25 +9,30 @@ import { ensureEnv } from "@/lib/concierge-rag";
 
 const STRIPE_API = "https://api.stripe.com/v1";
 
-export type PaidPlan = "pro_monthly" | "pro_annual";
+export type PaidPlan = "pro_monthly" | "pro_quarterly" | "pro_annual";
+
+// Stripe Price IDs (public — safe to ship). Created in the Maître Stripe account.
+export const STRIPE_PRICES: Record<PaidPlan, string> = {
+  pro_monthly: "price_1Tnr5v2KmgFSy1phWmWiYvVz",
+  pro_quarterly: "price_1Tnr602KmgFSy1ph3gwJ0ssU",
+  pro_annual: "price_1Tnr682KmgFSy1phshRd3uaq",
+};
+export const STRIPE_SETUP_FEE_PRICE = "price_1Tnr6R2KmgFSy1ph1opFXW3S";
 
 export function stripeConfig() {
   return {
     secret: process.env.STRIPE_SECRET_KEY || "",
     webhookSecret: process.env.STRIPE_WEBHOOK_SECRET || "",
-    prices: {
-      pro_monthly: process.env.STRIPE_PRICE_MONTHLY || "",
-      pro_annual: process.env.STRIPE_PRICE_ANNUAL || "",
-    } as Record<PaidPlan, string>,
+    prices: STRIPE_PRICES,
   };
 }
 
 /** Map a Stripe price id back to one of our plan ids. */
 export function planForPrice(priceId: string | null | undefined): PaidPlan | null {
   if (!priceId) return null;
-  const { prices } = stripeConfig();
-  if (priceId === prices.pro_monthly) return "pro_monthly";
-  if (priceId === prices.pro_annual) return "pro_annual";
+  for (const [plan, id] of Object.entries(STRIPE_PRICES)) {
+    if (priceId === id) return plan as PaidPlan;
+  }
   return null;
 }
 

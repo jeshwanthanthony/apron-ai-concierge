@@ -9,4 +9,4 @@
 // /api/stripe-webhook, /api/billing-portal). All of that code stays in the
 // repo on purpose, so turning paid plans back on is a one-line change here
 // (plus setting the Stripe env vars — see DEPLOY.md).
-export const BILLING_ENABLED = false;
+export const BILLING_ENABLED = true;
